@@ -2,14 +2,13 @@ const CryptoJS = require("crypto-js");
 var crypto = require('crypto');
 const fs = require('fs');
 
+/*
+* OBS: Não mude o valor de PATH_PASSWD com caminho direto para o
+* '/etc/passwd' !!! As funções ainda estão instáveis e podem causar
+* problemas para o seu computador.
+*/
 const PATH_PASSWD = "./passwdTest";
 
-/*
-fs.readFileSync("/etc/passwd")
-            .toString().split("\n").forEach(pass => {
-                console.log(pass);
-            });
-*/
 
 class Pass {
     constructor(pass) {
