@@ -9,8 +9,11 @@ const fs = require('fs');
 */
 const PATH_PASSWD = "./passwdTest";
 
+class ShadowModel {
 
-class Pass {
+}
+
+class PasswdModel {
     constructor(pass) {
         const p = pass.split(":");
         
@@ -27,18 +30,24 @@ class Pass {
         return `${this.user}:${this.x}:${this.id}:${this.gid}:` +
                 `${this.info}:${this.home}:${this.cmds}`;
     }
+
+    equals(other) {
+        return this.toString() === other.toString();
+    }
 }
 
 
 class PasswordService {
-    _reload() {
+    _reloadPasswd() {
         // TODO: Alterar o "/etc/passwd" para PATH_PASSWD
+        // TODO: Tratar erros de leitura de arquivo!
+        // Lendo o arquivo 'passwd'
         this.passwdContent = fs.readFileSync("/etc/passwd").toString();
         
-        // TODO: Tratar erros de leitura de arquivo!
+        // Armazenando os dados em uma estrutura
         this.passwords = this.passwdContent
             .split("\n")
-            .map(pass => new Pass(pass))
+            .map(pass => new PasswdModel(pass))
             .filter(pass => typeof pass.x !== 'undefined')
             .sort((a, b) => a.id - b.id);
     }
@@ -59,7 +68,7 @@ class PasswordService {
         this.passwdContent = "";
         this.passwords = [];
 
-        this._reload();
+        this._reloadPasswd();
         fs.writeFileSync("./passwd.default", this.passwdContent);
 
         const ids = this.passwords
@@ -69,9 +78,31 @@ class PasswordService {
         this.newId = Math.max(ids) + 1;
     }
 
-    add(user, password) {
+    add(user, password, info = "", cmds = "/bin/bash",createDir = true) {
+        // TODO: Adicionar a senha do usuário do arquivo /etc/shadow
         console.log(`Add User: ${user}\nSenha: ${password}`);
         console.log(`Id: ${this.newId}`);
+        
+        const id = this.newId;
+        let home = '';
+        if (createDir) {
+            home = `/home/${user}/`;
+        }
+        const userString = `${user}:x:${id}:${id}:${info}:${home}:${cmds}`;
+        const userModel = new PasswdModel(userString)
+
+        const filtered = this.passwords.filter(p => p.equals(userModel));
+        if (filtered.length === 0) {
+            this.newId++;
+            this.passwords.push(userModel);
+            this._updatePasswd();
+            return true;
+        }
+        if (filtered.length === 1) {
+            return false;
+        }
+
+        throw `Erro ao adicionar o usuário "${user}"!`
     }
 
     del(user) {
@@ -128,5 +159,5 @@ class PasswordService {
 
 module.exports = {
     PasswordService,
-    Pass
+    PasswdModel
 };
