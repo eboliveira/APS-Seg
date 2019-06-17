@@ -1,5 +1,4 @@
-const CryptoJS = require("crypto-js");
-var crypto = require('crypto');
+const crypto = require('crypto');
 const fs = require('fs');
 
 /*
@@ -7,15 +6,40 @@ const fs = require('fs');
 * '/etc/passwd' !!! As funções ainda estão instáveis e podem causar
 * problemas para o seu computador.
 */
-const PATH_PASSWD = "./passwdTest";
+const PATH_PASSWD = "./passwd.log";
 
-class ShadowModel {
+class ShadowModel { 
+    // Link to more informations
+    // https://www.cyberciti.biz/faq/understanding-etcshadow-file/
+    // https://www.tldp.org/LDP/lame/LAME/linux-admin-made-easy/shadow-file-formats.html
+    constructor(shadowOfTheColossus) {
+        const s = shadowOfTheColossus.split(":");
 
+        this.user        = s[0];
+        this.password    = s[1];
+        this.lastchanged = s[2];
+        this.minDays     = s[3];
+        this.maxDays     = s[4];
+        this.warnDays    = s[5];
+        this.inactive    = s[6];
+        this.expire      = s[7];
+        this.reserved    = s[8];
+    }
+
+    toString() {
+        return `${this.user}:${this.password}:${this.lastchanged}:` +
+                `${this.minDays}:${this.maxDays}:${this.warnDays}:` +
+                `${this.inactive}:${this.expire}:${this.reserved}`;
+    }
+
+    equals(other) {
+        return this.toString() === other.toString();
+    }
 }
 
 class PasswdModel {
-    constructor(pass) {
-        const p = pass.split(":");
+    constructor(passwd) {
+        const p = passwd.split(":");
         
         this.user = p[0];
         this.x    = p[1];
@@ -66,10 +90,11 @@ class PasswordService {
 
     constructor() {
         this.passwdContent = "";
+        this.passwdHash = "";
         this.passwords = [];
 
         this._reloadPasswd();
-        fs.writeFileSync("./passwd.default", this.passwdContent);
+        fs.writeFileSync("./passwd.default.log", this.passwdContent);
 
         const ids = this.passwords
             .map(pass => pass.id)
@@ -83,16 +108,32 @@ class PasswordService {
         console.log(`Add User: ${user}\nSenha: ${password}`);
         console.log(`Id: ${this.newId}`);
         
+        // Criando o modelo para o arquivo 'passwd'
         const id = this.newId;
-        let home = '';
-        if (createDir) {
-            home = `/home/${user}/`;
-        }
+        let home = createDir ? `/home/${user}/` : '' ;
         const userString = `${user}:x:${id}:${id}:${info}:${home}:${cmds}`;
         const userModel = new PasswdModel(userString)
 
         const filtered = this.passwords.filter(p => p.equals(userModel));
         if (filtered.length === 0) {
+            // Criando o modelo para o arquivo 'shadow'
+            const salt = "$6$" + genRandomString(8);
+
+            // TODO: Fazer isto de forma asíncrona
+            fs.writeFileSync(".pipeCrypt", `${password} ${salt}`);
+            let hash = '';
+            let time = 0;
+            while (hash.length < 50){
+                hash = fs.readFileSync(".pipeCrypt").toString();
+                sleep(10);
+                time += 10;
+            }
+            console.log(`Time: ${time}`);
+            const pass = `${salt}$${hash}`;
+            const date = Math.trunc(Date.now() / 3600000);
+            const shadowString = `${user}:${pass}:${date}:0:99999:7:::`;
+            const shadowModel = new ShadowModel(shadowString);
+            
             this.newId++;
             this.passwords.push(userModel);
             this._updatePasswd();
@@ -155,6 +196,26 @@ class PasswordService {
         }
         return i !== this.passwords.length; 
     }
+}
+
+function sleep(delay) {
+    var start = new Date().getTime();
+    while (new Date().getTime() < start + delay);
+}
+
+function genRandomString(length) {
+    return crypto.randomBytes(Math.ceil(length/2))
+            .toString('hex') /** convert to hexadecimal format */
+            .slice(0,length);   /** return required number of characters */
+}
+
+function sha512(password, salt) {
+    /** Hashing algorithm sha512 */
+    var hash = crypto.createHash('sha512', salt);
+    hash.update(password);
+    return hash.digest('hex').slice(0, 86);
+    // return crypt(password, salt);
+    // return hash;
 }
 
 module.exports = {
