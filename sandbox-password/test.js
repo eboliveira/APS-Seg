@@ -4,8 +4,21 @@ const {
     PasswdModel
 } = require("./Password.service.js");
 const assert = require("assert");
+const fs = require('fs');
 
-
+function deleteFolderRecursive(path) {
+    if (fs.existsSync(path)) {
+        fs.readdirSync(path).forEach((file) => {
+            var curPath = path + "/" + file;
+            if (fs.lstatSync(curPath).isDirectory()) {
+                deleteFolderRecursive(curPath);
+            } else {
+                fs.unlinkSync(curPath);
+            }
+        });
+        fs.rmdirSync(path);
+    }
+};
 
 describe('PasswordService', () => {
     service = new PasswordService();
@@ -96,5 +109,18 @@ describe('PasswordService', () => {
             assert.equal(service.del('Saitama'),  true);
             assert.equal(service.del('Meliodas'), true);
         });
+    });
+
+    describe("Testando características", () => {
+        it('Acionando usuário e criando um diretório', () => {
+            const home = "./Home/";
+            let created = service.add("MamaeHawk", "verde", { home: home });
+            assert.equal(created, true);
+            created = fs.existsSync(home);
+            assert.equal(created, true);
+            if (created) {
+                deleteFolderRecursive(home);
+            }
+        })
     });
 });

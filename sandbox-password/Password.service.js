@@ -145,10 +145,10 @@ class PasswordService {
         /*
         * kargs: infos, cmds, createDir, home
         */
+        const createDir = kargs.createDir;
         const infos = kargs.infos ? kargs.infos : "" ;
         const home  = kargs.home  ? kargs.home  : `/home/${user}/` ;
         const cmds  = kargs.cmds  ? kargs.cmds  : `/bin/bash` ;
-        const createDir = kargs.createDir;
         // Criando o modelo para o arquivo 'passwd'
         const id = this.newId;
         const userString = `${user}:x:${id}:${id}:${infos}:${home}:${cmds}`;
@@ -168,7 +168,10 @@ class PasswordService {
 
             const hasShadow = this.managerShadow.has(shadowModel);
             if (!hasShadow) {
-                // TODO: Criar o diretório para o usuário, caso for exigido
+                if ((createDir || kargs.home) && !fs.existsSync(home)){
+                    // Criando o diretório para o usuario, caso exigido
+                    fs.mkdirSync(home);
+                }
                 this.managerPasswd.add(passwdModel);
                 this.managerShadow.add(shadowModel);
                 this.newId++;
