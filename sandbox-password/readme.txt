@@ -1,7 +1,8 @@
-Testes unitários com mocha criados
+
 
 # AVISOS FIXOS
 --------------
+# ----- !!! ATENÇÃO !!! -----
 - OBS: Não use o valor de this.filename na classe Manager !!! As funções ainda estão instáveis e podem causar problemas para o seu computador.
 
 
@@ -13,6 +14,11 @@ Testes unitários com mocha criados
 - Use:
 > npm install
 > python3 deamonCrypt.py &
+- Após a primeira chamada do algorito do python, não é necessário chamar ele de novo. Ele ficará rodando e background no seu terminal.
+- Use novamente quando você o fechar.
+- Use 'jobs' para ver se eles está rodando.
+- Para fechar use 'fg' -> 'ctrl + C'.
+
 
 # Para testes manuais
 > sudo node teste_Password.js 
@@ -20,8 +26,6 @@ Testes unitários com mocha criados
 # Para testes automáticos - O arquivo de teste é o 'test.js'
 > sudo mocha
 
-- Após a primeira chamada do algorito do python, não é necessário chamar ele de novo. Ele ficará rodando e background no seu terminal. Para fazer outros testes se apenas:
-> node teste_Password.js
 
 
 
