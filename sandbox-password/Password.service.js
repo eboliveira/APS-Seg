@@ -1,3 +1,4 @@
+const b64_sha512crypt = require('sha512crypt-node');
 const crypto = require('crypto');
 const fs = require('fs');
 
@@ -56,6 +57,7 @@ class PasswdModel {
 
 class Manager {
     check() {
+        // Verifica se o arquivo foi alterado fora da aplicação
         const hash = sha512(this.content, this.filename);
         return self.hash === hash;
     }
@@ -95,6 +97,7 @@ class Manager {
         this.hash = "";
         this.objects = [];
         this.reload();
+        console.log("Update:", this.objects.length);
         fs.writeFileSync(this._filename + ".default", this.content);
     }
 
@@ -138,31 +141,29 @@ class PasswordService {
         this.newId = Math.max(ids) + 1;
     }
 
-    add(user, password, info = "", cmds = "/bin/bash",createDir = true) {
+    add(user, password, kargs = {}) {
+        /*
+        * kargs: infos, cmds, createDir, home
+        */
+        const infos = kargs.infos ? kargs.infos : "" ;
+        const home  = kargs.home  ? kargs.home  : `/home/${user}/` ;
+        const cmds  = kargs.cmds  ? kargs.cmds  : `/bin/bash` ;
+        const createDir = kargs.createDir;
         // Criando o modelo para o arquivo 'passwd'
         const id = this.newId;
-        let home = createDir ? `/home/${user}/` : '' ;
         const userString = `${user}:x:${id}:${id}:${info}:${home}:${cmds}`;
         const passwdModel = new PasswdModel(userString);
 
+        // Verificando se este usuário já existe
         const hasUser = this.managerPasswd.has(passwdModel);
         if (!hasUser) {
             // Criando o modelo para o arquivo 'shadow'
-            const salt = "$6$" + genRandomString(8);
-
-            // TODO: Fazer isto de forma assíncrona ou de outra forma...
-            fs.writeFileSync(".pipeCrypt", `${password} ${salt}`);
-            let hash = '', time = 0;
-            while (hash.length < 50){
-                hash = fs.readFileSync(".pipeCrypt").toString();
-                sleep(10);
-                time += 10;
-            }
-            // console.log(`Time: ${time}`);
-            const pass = `${salt}$${hash}`;
+            const salt = `$6$${genRandomString(8)}`;
+            const code = b64_sha512crypt.sha512crypt(password, salt);
+            const hash = "$" + code.split("$").slice(4).join("$");
             // TODO: Verificar se 'date' corresponde com o valor exigido
             const date = Math.trunc(Date.now() / 3600000);
-            const shadowString = `${user}:${pass}:${date}:0:99999:7:::`;
+            const shadowString = `${user}:${hash}:${date}:0:99999:7:::`;
             const shadowModel = new ShadowModel(shadowString);
 
             const hasShadow = this.managerShadow.has(shadowModel);
