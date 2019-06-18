@@ -167,6 +167,7 @@ class PasswordService {
 
             const hasShadow = this.managerShadow.has(shadowModel);
             if (!hasShadow) {
+                // TODO: Criar o diretório para o usuário, caso for exigido
                 this.managerPasswd.add(passwdModel);
                 this.managerShadow.add(shadowModel);
                 this.newId++;

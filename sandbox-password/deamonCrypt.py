@@ -11,7 +11,6 @@ class MyHandler(FileSystemEventHandler):
             with open("./.pipeCrypt", "r", encoding="utf-8") as file:
                 for line in file.readlines():
                     group = line.split(" ")
-                    print(group)
                     if len(group) == 2:
                         results.append(crypt.crypt(group[0], group[1]))
             if results:
@@ -23,7 +22,7 @@ class MyHandler(FileSystemEventHandler):
 
 if __name__ == "__main__":
     event_handler = MyHandler()
-    observer = Observer()
+    observer = Observer(timeout=0.1)
     observer.schedule(event_handler, path='./', recursive=False)
     observer.start()
 
