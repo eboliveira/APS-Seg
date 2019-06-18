@@ -1,7 +1,7 @@
 
 # AVISOS FIXOS
 --------------
-- OBS: Não mude o valor de PATH_PASSWD com caminho direto para o '/etc/passwd' !!! As funções ainda estão instáveis e podem causar problemas para o seu computador.
+- OBS: Não use o valor de this.filename na classe Manager !!! As funções ainda estão instáveis e podem causar problemas para o seu computador.
 
 
 # 17/06/2019
@@ -9,7 +9,10 @@
 - Gambiara implementada. Para testar é necessário instalar o módulo 'watchdog' no 'python3.x' (^ Python 3).
 
 - Use:
-> python3 deamonCrypt.py
+> python3 deamonCrypt.py &
+> node Password.service.js
+
+- Após a primeira chamada do algorito do python, não é necessário chamar ele de novo. Ele ficará rodando e background no seu terminal. Para fazer outros testes se apenas:
 > node Password.service.js
 
 

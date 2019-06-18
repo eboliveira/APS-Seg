@@ -1,12 +1,6 @@
 const crypto = require('crypto');
 const fs = require('fs');
 
-/*
-* OBS: Não mude o valor de PATH_PASSWD com caminho direto para o
-* '/etc/passwd' !!! As funções ainda estão instáveis e podem causar
-* problemas para o seu computador.
-*/
-const PATH_PASSWD = "./passwd.log";
 
 class ShadowModel { 
     // Link to more informations
@@ -33,7 +27,7 @@ class ShadowModel {
     }
 
     equals(other) {
-        return this.toString() === other.toString();
+        return this.user === other.user;
     }
 }
 
@@ -56,47 +50,88 @@ class PasswdModel {
     }
 
     equals(other) {
-        return this.toString() === other.toString();
+        return this.user === other.user;
+    }
+}
+
+class Manager {
+    check() {
+        const hash = sha512(this.content, this.filename);
+        return self.hash === hash;
+    }
+
+    reload() {
+        // Lendo o conteúdo do arquivo gerenciado
+        this.content = fs.readFileSync(this.filename).toString();
+
+        // Armazenando os dados em uma estrutura
+        this.objects = this.content
+            .split("\n")
+            .filter(line => line !== "")
+            .map(line => new this.Model(line));
+        
+        this.hash = sha512(this.content, this.filename);
+    }
+
+    update() {
+        // Recriando o arquivo com o conteúdo da memória
+        this.content = this.objects
+            .map(obj => obj.toString())
+            .join("\n");
+        fs.writeFileSync(this._filename, this.content);
+    }
+
+    constructor(filename, Model) {
+        /*
+        * OBS: Não use o valor de this.filename!!!
+        * As funções ainda estão instáveis e podem causar
+        * problemas para o seu computador.
+        */
+        this.filename = filename;
+        this._filename = "./" + filename.replace(new RegExp("/", "g"), ".").slice(1) + ".log" ;
+        console.log(this._filename);
+        this.Model = Model;
+        this.content = "";
+        this.hash = "";
+        this.objects = [];
+        this.reload();
+        fs.writeFileSync(this._filename + ".default", this.content);
+    }
+
+    has(Model) {
+        return this.objects.filter(obj => obj.equals(Model)).length;
+    }
+
+    getIndex(Model) {
+        for (let i = 0; i < this.objects.length; i++)
+            if (this.objects[i].equals(Model))
+                return i;
+        return -1;
+    }
+
+    add(Model) {
+        this.objects.push(Model);
+        this.update();
+    }
+
+    del(Model) {
+        const previousLength = this.objects.length;
+        this.objects = this.objects.filter(obj => !obj.equals(Model));
+        return previousLength - this.objects.length;
+    }
+
+    watch(callback) {
+        fs.watchFile(this.filename, callback);
     }
 }
 
 
 class PasswordService {
-    _reloadPasswd() {
-        // TODO: Alterar o "/etc/passwd" para PATH_PASSWD
-        // TODO: Tratar erros de leitura de arquivo!
-        // Lendo o arquivo 'passwd'
-        this.passwdContent = fs.readFileSync("/etc/passwd").toString();
-        
-        // Armazenando os dados em uma estrutura
-        this.passwords = this.passwdContent
-            .split("\n")
-            .map(pass => new PasswdModel(pass))
-            .filter(pass => typeof pass.x !== 'undefined')
-            .sort((a, b) => a.id - b.id);
-    }
-
-    _updatePasswd() {
-        // Recriado o conteúdo do arquivo 'passwd' com as informações
-        // contidas em memória
-        this.passwdContent = this.passwords
-            .map(pass => pass.toString())
-            .join("\n") + "\n";
-        
-        // TODO: Tratar erros de escrita de arquivo!
-        // Escrevendo as alterações no arquivo passwd
-        fs.writeFileSync(PATH_PASSWD, this.passwdContent);
-    }
-
     constructor() {
-        this.passwdContent = "";
-        this.passwdHash = "";
-        this.passwords = [];
+        this.managerPasswd = new Manager("/etc/passwd", PasswdModel);
+        this.managerShadow = new Manager("/etc/shadow", ShadowModel);
 
-        this._reloadPasswd();
-        fs.writeFileSync("./passwd.default.log", this.passwdContent);
-
-        const ids = this.passwords
+        const ids = this.managerPasswd.objects
             .map(pass => pass.id)
             .filter(id => id >= 1000 && id < 10000);
         
@@ -104,97 +139,83 @@ class PasswordService {
     }
 
     add(user, password, info = "", cmds = "/bin/bash",createDir = true) {
-        // TODO: Adicionar a senha do usuário do arquivo /etc/shadow
-        console.log(`Add User: ${user}\nSenha: ${password}`);
-        console.log(`Id: ${this.newId}`);
-        
         // Criando o modelo para o arquivo 'passwd'
         const id = this.newId;
         let home = createDir ? `/home/${user}/` : '' ;
         const userString = `${user}:x:${id}:${id}:${info}:${home}:${cmds}`;
-        const userModel = new PasswdModel(userString)
+        const passwdModel = new PasswdModel(userString);
 
-        const filtered = this.passwords.filter(p => p.equals(userModel));
-        if (filtered.length === 0) {
+        const hasUser = this.managerPasswd.has(passwdModel);
+        if (!hasUser) {
             // Criando o modelo para o arquivo 'shadow'
             const salt = "$6$" + genRandomString(8);
 
-            // TODO: Fazer isto de forma asíncrona
+            // TODO: Fazer isto de forma assíncrona ou de outra forma...
             fs.writeFileSync(".pipeCrypt", `${password} ${salt}`);
-            let hash = '';
-            let time = 0;
+            let hash = '', time = 0;
             while (hash.length < 50){
                 hash = fs.readFileSync(".pipeCrypt").toString();
                 sleep(10);
                 time += 10;
             }
-            console.log(`Time: ${time}`);
+            // console.log(`Time: ${time}`);
             const pass = `${salt}$${hash}`;
+            // TODO: Verificar se 'date' corresponde com o valor exigido
             const date = Math.trunc(Date.now() / 3600000);
             const shadowString = `${user}:${pass}:${date}:0:99999:7:::`;
             const shadowModel = new ShadowModel(shadowString);
-            
-            this.newId++;
-            this.passwords.push(userModel);
-            this._updatePasswd();
-            return true;
-        }
-        if (filtered.length === 1) {
-            return false;
+
+            const hasShadow = this.managerShadow.has(shadowModel);
+            if (!hasShadow) {
+                this.managerPasswd.add(passwdModel);
+                this.managerShadow.add(shadowModel);
+                this.newId++;
+                return true;
+            }
         }
 
-        throw `Erro ao adicionar o usuário "${user}"!`
+        return false;
     }
 
     del(user) {
-        // TODO: Remover a senha do usuário do arquivo /etc/shadow
-        const previousLength = this.passwords.length;
-
-        this.passwords = this.passwords
-            .filter(pass => pass.user !== user);
+        const isExcludedP = this.managerPasswd.del(new PasswdModel(user));
+        const isExcludedS = this.managerShadow.del(new ShadowModel(user));
         
-        if (this.passwords.length === (previousLength - 1)) {
-            // Recriado o conteúdo do arquivo 'passwd', sem o
-            // usuário deletado
-            this._updatePasswd();
-            return true; 
-        } else if (this.passwords.length === previousLength) {
+        if (isExcludedP === 1 && isExcludedS == 1) {
+            // Atualizando os arquivos para o usuário deletado
+            this.managerPasswd.update();
+            this.managerShadow.update();
+            return true;
+        } else if (isExcludedP === 0) {
             // Usuário não encontrado
             return false;
         } 
-
         // Se chegar aqui, aconteceu algum erro!
         throw `Erro ao deletar o usuário "${user}"!`
     }
 
     lock(user) {
-        // Bloqueia um usuário colocar uma '!x' no atributo x na linha
-        // deste usuário no arquivo 'passwd'
-        let i;
-        for (i = 0; i < this.passwords.length; i++) {
-            if (this.passwords[i].user === user) {
-                this.passwords[i].x = "!x";
-                this._updatePasswd();
-                break;
-            }
+        // Bloqueia um usuário negando a referência para a sua senha (!x) no
+        // arquivo 'passwd'
+        let i = this.managerPasswd.getIndex(new PasswdModel(user));
+        if (i !== -1) {
+            this.managerPasswd.objects[i].x = "!x";
+            this.managerPasswd.update();
         }
-
-        // Retorna true se o usuário foi encontrado e bloquiado
-        return i !== this.passwords.length; 
+        // Retorna true se o usuário foi encontrado e bloqueado
+        return i !== -1;
     }
 
     unlock(user) {
-        // Desbloqueia um usuário colocar uma 'x' no atributo x na linha
-        // deste usuário no arquivo 'passwd'
-        let i;
-        for (i = 0; i < this.passwords.length; i++) {
-            if (this.passwords[i].user === user) {
-                this.passwords[i].x = "x";
-                this._updatePasswd();
-                break;
-            }
+        // Desbloqueia um usuário removendo a negação da referência de sua 
+        // senha (x) arquivo 'passwd'
+        let i = this.managerPasswd.getIndex(new PasswdModel(user));
+        if (i !== -1) {
+            this.managerPasswd.objects[i].x = "x";
+            this.managerPasswd.update();
         }
-        return i !== this.passwords.length; 
+        // Retorna true se o usuário foi encontrado e desbloqueado
+        return i !== -1;
     }
 }
 

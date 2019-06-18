@@ -15,11 +15,10 @@ class MyHandler(FileSystemEventHandler):
                     if len(group) == 2:
                         results.append(crypt.crypt(group[0], group[1]))
             if results:
-                print(results)
                 with open("./.pipeCrypt", "w", encoding="utf-8") as file:
                     file.write("\n".join(results))
 
-        print(f'event type: {event.event_type}  path : {event.src_path}')
+        # print(f'event type: {event.event_type}  path : {event.src_path}')
 
 
 if __name__ == "__main__":
