@@ -151,7 +151,7 @@ class PasswordService {
         const createDir = kargs.createDir;
         // Criando o modelo para o arquivo 'passwd'
         const id = this.newId;
-        const userString = `${user}:x:${id}:${id}:${info}:${home}:${cmds}`;
+        const userString = `${user}:x:${id}:${id}:${infos}:${home}:${cmds}`;
         const passwdModel = new PasswdModel(userString);
 
         // Verificando se este usuário já existe
@@ -219,29 +219,25 @@ class PasswordService {
         // Retorna true se o usuário foi encontrado e desbloqueado
         return i !== -1;
     }
-}
 
-function sleep(delay) {
-    var start = new Date().getTime();
-    while (new Date().getTime() < start + delay);
 }
 
 function genRandomString(length) {
+    // Gerador de strings aleatórias.
     return crypto.randomBytes(Math.ceil(length/2))
-            .toString('hex') /** convert to hexadecimal format */
-            .slice(0,length);   /** return required number of characters */
+            .toString('hex')
+            .slice(0,length);
 }
 
 function sha512(password, salt) {
-    /** Hashing algorithm sha512 */
+    // Algoritimo de hash sha512.
     var hash = crypto.createHash('sha512', salt);
     hash.update(password);
     return hash.digest('hex').slice(0, 86);
-    // return crypt(password, salt);
-    // return hash;
 }
 
 module.exports = {
     PasswordService,
-    PasswdModel
+    PasswdModel,
+    ShadowModel
 };

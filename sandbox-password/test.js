@@ -1,10 +1,16 @@
-const { PasswordService } = require("./Password.service.js");
+const { 
+    PasswordService,
+    ShadowModel,
+    PasswdModel
+} = require("./Password.service.js");
 const assert = require("assert");
 
 
 
 describe('PasswordService', () => {
     service = new PasswordService();
+    initialLengthPasswd = service.managerPasswd.objects.length;
+    initialLengthShadow = service.managerShadow.objects.length;
 
     describe('Testes em usuários inexistêntes', () => {
         it('Deletando usuários inexistêntes', () => {
@@ -35,6 +41,30 @@ describe('PasswordService', () => {
         it('Adicionando usuários inexistêntes (2 personagens)', () => {
             assert.equal(service.add('Saitama', 'punch'), true);
             assert.equal(service.add('Meliodas', 'dark'), true);
+        });
+    });
+
+    describe('Teste da adição de usuários', () => {
+        it('Length', () => {
+            assert.equal(
+                initialLengthPasswd + 4,
+                service.managerPasswd.objects.length
+            );
+            assert.equal(
+                initialLengthShadow + 4,
+                service.managerShadow.objects.length
+            );
+        });
+
+        it('Has', () => {
+            let user = new PasswdModel('PaTaTi');
+            assert.equal(service.managerPasswd.has(user), 1);
+            user = new PasswdModel('PaTaTa');
+            assert.equal(service.managerPasswd.has(user), 1);
+            user = new PasswdModel('Saitama');
+            assert.equal(service.managerPasswd.has(user), 1);
+            user = new PasswdModel('Meliodas');
+            assert.equal(service.managerPasswd.has(user), 1);
         });
     });
 

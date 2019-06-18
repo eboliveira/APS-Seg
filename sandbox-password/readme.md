@@ -1,14 +1,28 @@
 
 
 # AVISOS FIXOS
---------------
-# ----- !!! ATENÇÃO !!! -----
+## **!!! ATENÇÃO !!!**
 - OBS: Não use o valor de this.filename na classe Manager !!! As funções ainda estão instáveis e podem causar problemas para o seu computador.
 
 
 
+
+# 18/06/2019
+- Removendo a depência com o Python e desfazendo a gambiara.
+
+- Use:
+> npm install
+
+- Para testes manuais
+> sudo node teste_Password.js
+
+- Para testes automáticos - O arquivo de teste é o 'test.js'
+> sudo mocha
+
+
+
+
 # 17/06/2019
-------------
 - Gambiara implementada. Para testar é necessário instalar o módulo 'watchdog' no 'python3.x' (^ Python 3). Testes unitários implementados.
 
 - Use:
@@ -23,14 +37,13 @@
 # Para testes manuais
 > sudo node teste_Password.js 
 
-# Para testes automáticos - O arquivo de teste é o 'test.js'
+- Para testes automáticos - O arquivo de teste é o 'test.js'
 > sudo mocha
 
 
 
 
 # Antes de 17/06/2019
----------------------
 - Para testar o arquivo teste_Password.js é necessário instalar os pacotes "crypto-js", ou remove-lo do arquivo Password.service.js, por ainda não estar sendo utilizado.
 
 - Simplesmente rode com:
