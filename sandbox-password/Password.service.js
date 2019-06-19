@@ -3,12 +3,32 @@ const crypto = require('crypto');
 const fs = require('fs');
 
 
+class GroupModel {
+    constructor(group) {
+        const g = group.split('.');
+
+        this.name  = g[0];
+        this.pass  = g[1];
+        this.gid   = g[2];
+        this.listUsers = g[3].split(',');
+    }
+
+    toString() {
+        return `${this.name}:${this.pass}:${this.gid}:` +
+                `${this.listUsers.join(',')}`;
+    }
+
+    equals(other) {
+        return this.name == other.name;
+    }
+}
+
 class ShadowModel { 
-    // Link to more informations
+    // Links para mais informações
     // https://www.cyberciti.biz/faq/understanding-etcshadow-file/
     // https://www.tldp.org/LDP/lame/LAME/linux-admin-made-easy/shadow-file-formats.html
     constructor(shadowOfTheColossus) {
-        const s = shadowOfTheColossus.split(":");
+        const s = shadowOfTheColossus.split(':');
 
         this.user        = s[0];
         this.password    = s[1];
@@ -33,8 +53,10 @@ class ShadowModel {
 }
 
 class PasswdModel {
+    // Link para mais informações
+    // https://www.cyberciti.biz/faq/understanding-etcpasswd-file-format/
     constructor(passwd) {
-        const p = passwd.split(":");
+        const p = passwd.split(':');
         
         this.user = p[0];
         this.x    = p[1];
@@ -68,8 +90,8 @@ class Manager {
 
         // Armazenando os dados em uma estrutura
         this.objects = this.content
-            .split("\n")
-            .filter(line => line !== "")
+            .split('\n')
+            .filter(line => line !== '')
             .map(line => new this.Model(line));
         
         this.hash = sha512(this.content, this.filename);
@@ -79,7 +101,7 @@ class Manager {
         // Recriando o arquivo com o conteúdo da memória
         this.content = this.objects
             .map(obj => obj.toString())
-            .join("\n");
+            .join('\n');
         fs.writeFileSync(this._filename, this.content);
     }
 
@@ -90,15 +112,14 @@ class Manager {
         * problemas para o seu computador.
         */
         this.filename = filename;
-        this._filename = "./" + filename.replace(new RegExp("/", "g"), ".").slice(1) + ".log" ;
-        console.log(this._filename);
+        this._filename = './' + filename.replace(new RegExp('/', 'g'), '.')
+            .slice(1) + '.log' ;
         this.Model = Model;
-        this.content = "";
-        this.hash = "";
+        this.content = '';
+        this.hash = '';
         this.objects = [];
         this.reload();
-        console.log("Update:", this.objects.length);
-        fs.writeFileSync(this._filename + ".default", this.content);
+        fs.writeFileSync(this._filename + '.default', this.content);
     }
 
     has(Model) {
@@ -131,8 +152,10 @@ class Manager {
 
 class PasswordService {
     constructor() {
-        this.managerPasswd = new Manager("/etc/passwd", PasswdModel);
-        this.managerShadow = new Manager("/etc/shadow", ShadowModel);
+        // TODO: Tratar o arquivo /etc/group também
+        this.managerPasswd = new Manager('/etc/passwd', PasswdModel);
+        this.managerShadow = new Manager('/etc/shadow', ShadowModel);
+        this.managerGroup  = new Manager('/etc/group',  GroupModel);
 
         const ids = this.managerPasswd.objects
             .map(pass => pass.id)
@@ -146,7 +169,7 @@ class PasswordService {
         * kargs: infos, cmds, createDir, home
         */
         const createDir = kargs.createDir;
-        const infos = kargs.infos ? kargs.infos : "" ;
+        const infos = kargs.infos ? kargs.infos : '' ;
         const home  = kargs.home  ? kargs.home  : `/home/${user}/` ;
         const cmds  = kargs.cmds  ? kargs.cmds  : `/bin/bash` ;
         // Criando o modelo para o arquivo 'passwd'
@@ -160,7 +183,7 @@ class PasswordService {
             // Criando o modelo para o arquivo 'shadow'
             const salt = `$6$${genRandomString(8)}`;
             const code = b64_sha512crypt.sha512crypt(password, salt);
-            const hash = "$" + code.split("$").slice(4).join("$");
+            const hash = '$' + code.split('$').slice(4).join('$');
             // TODO: Verificar se 'date' corresponde com o valor exigido
             const date = Math.trunc(Date.now() / 3600000);
             const shadowString = `${user}:${hash}:${date}:0:99999:7:::`;
@@ -196,7 +219,7 @@ class PasswordService {
             return false;
         } 
         // Se chegar aqui, aconteceu algum erro!
-        throw `Erro ao deletar o usuário "${user}"!`
+        throw `Erro ao deletar o usuário '${user}'!`
     }
 
     lock(user) {
@@ -204,7 +227,7 @@ class PasswordService {
         // arquivo 'passwd'
         let i = this.managerPasswd.getIndex(new PasswdModel(user));
         if (i !== -1) {
-            this.managerPasswd.objects[i].x = "!x";
+            this.managerPasswd.objects[i].x = '!x';
             this.managerPasswd.update();
         }
         // Retorna true se o usuário foi encontrado e bloqueado
@@ -216,7 +239,7 @@ class PasswordService {
         // senha (x) arquivo 'passwd'
         let i = this.managerPasswd.getIndex(new PasswdModel(user));
         if (i !== -1) {
-            this.managerPasswd.objects[i].x = "x";
+            this.managerPasswd.objects[i].x = 'x';
             this.managerPasswd.update();
         }
         // Retorna true se o usuário foi encontrado e desbloqueado
@@ -242,5 +265,6 @@ function sha512(password, salt) {
 module.exports = {
     PasswordService,
     PasswdModel,
-    ShadowModel
+    ShadowModel,
+    GroupModel
 };
