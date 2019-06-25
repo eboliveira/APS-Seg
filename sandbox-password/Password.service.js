@@ -2,24 +2,41 @@ const b64_sha512crypt = require('sha512crypt-node');
 const crypto = require('crypto');
 const fs = require('fs');
 
+function deleteFolderRecursive(path) {
+    if (fs.existsSync(path)) {
+        fs.readdirSync(path).forEach((file) => {
+            var curPath = path + "/" + file;
+            if (fs.lstatSync(curPath).isDirectory()) {
+                deleteFolderRecursive(curPath);
+            } else {
+                fs.unlinkSync(curPath);
+            }
+        });
+        fs.rmdirSync(path);
+    }
+};
 
 class GroupModel {
     constructor(group) {
-        const g = group.split('.');
+        const g = group.split(':');
 
         this.name  = g[0];
         this.pass  = g[1];
         this.gid   = g[2];
-        this.listUsers = g[3].split(',');
+        this.users = g[3] ? g[3].split(',') : [];
     }
 
     toString() {
         return `${this.name}:${this.pass}:${this.gid}:` +
-                `${this.listUsers.join(',')}`;
+                `${this.users.join(',')}`;
     }
 
     equals(other) {
         return this.name == other.name;
+    }
+
+    copy() {
+        return new GroupModel(this.toString());
     }
 }
 
@@ -30,7 +47,7 @@ class ShadowModel {
     constructor(shadowOfTheColossus) {
         const s = shadowOfTheColossus.split(':');
 
-        this.user        = s[0];
+        this.name        = s[0];
         this.password    = s[1];
         this.lastchanged = s[2];
         this.minDays     = s[3];
@@ -42,13 +59,17 @@ class ShadowModel {
     }
 
     toString() {
-        return `${this.user}:${this.password}:${this.lastchanged}:` +
+        return `${this.name}:${this.password}:${this.lastchanged}:` +
                 `${this.minDays}:${this.maxDays}:${this.warnDays}:` +
                 `${this.inactive}:${this.expire}:${this.reserved}`;
     }
 
     equals(other) {
-        return this.user === other.user;
+        return this.name === other.name;
+    }
+
+    copy() {
+        return new ShadowModel(this.toString());
     }
 }
 
@@ -58,7 +79,7 @@ class PasswdModel {
     constructor(passwd) {
         const p = passwd.split(':');
         
-        this.user = p[0];
+        this.name = p[0];
         this.x    = p[1];
         this.id   = parseInt(p[2]);
         this.gid  = parseInt(p[3]);
@@ -68,14 +89,19 @@ class PasswdModel {
     }
 
     toString() {
-        return `${this.user}:${this.x}:${this.id}:${this.gid}:` +
+        return `${this.name}:${this.x}:${this.id}:${this.gid}:` +
                 `${this.info}:${this.home}:${this.cmds}`;
     }
 
     equals(other) {
-        return this.user === other.user;
+        return this.name === other.name;
+    }
+
+    copy() {
+        return new PasswdModel(this.toString());
     }
 }
+
 
 class Manager {
     check() {
@@ -147,6 +173,10 @@ class Manager {
     watch(callback) {
         fs.watchFile(this.filename, callback);
     }
+
+    filter(condition) {
+        return this.objects.filter(condition);
+    }
 }
 
 
@@ -164,6 +194,8 @@ class PasswordService {
         this.newId = Math.max(ids) + 1;
     }
 
+    // TODO: Remover kargs
+    // TODO: Criar métodos específicos para possíveis alterações
     add(user, password, kargs = {}) {
         /*
         * kargs: infos, cmds, createDir, home
@@ -176,6 +208,8 @@ class PasswordService {
         const id = this.newId;
         const userString = `${user}:x:${id}:${id}:${infos}:${home}:${cmds}`;
         const passwdModel = new PasswdModel(userString);
+        const groupString = `${user}:x:${id}:`;
+        const groupModel = new GroupModel(groupString);
 
         // Verificando se este usuário já existe
         const hasUser = this.managerPasswd.has(passwdModel);
@@ -197,6 +231,7 @@ class PasswordService {
                 }
                 this.managerPasswd.add(passwdModel);
                 this.managerShadow.add(shadowModel);
+                this.managerGroup.add(groupModel);
                 this.newId++;
                 return true;
             }
@@ -246,6 +281,29 @@ class PasswordService {
         return i !== -1;
     }
 
+    getUsers() {
+        return this.managerPasswd.objects
+            .map(group => group.copy());
+    }
+    getGroups() {
+        return this.managerGroup.objects
+            .map(group => group.copy());
+    }
+
+    getUser(user) {
+        const i = this.managerPasswd.getIndex(new PasswdModel(user));
+        return this.managerPasswd.objects[i].copy();
+    }
+    getGroup(group) {
+        const i = this.managerGroup.getIndex(new GroupModel(group));
+        return this.managerGroup.objects[i].copy(); 
+    }
+    
+    getGroups(user) {
+        return this.managerGroup.filter((group) => {
+            return group.users.includes(user);
+        }).map(group => group.copy());
+    }
 }
 
 function genRandomString(length) {
@@ -266,5 +324,6 @@ module.exports = {
     PasswordService,
     PasswdModel,
     ShadowModel,
-    GroupModel
+    GroupModel,
+    deleteFolderRecursive
 };
