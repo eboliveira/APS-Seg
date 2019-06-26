@@ -1,24 +1,12 @@
 const { 
     PasswordService,
     ShadowModel,
-    PasswdModel
+    PasswdModel,
+    deleteFolderRecursive
 } = require("./Password.service.js");
 const assert = require("assert");
 const fs = require('fs');
 
-function deleteFolderRecursive(path) {
-    if (fs.existsSync(path)) {
-        fs.readdirSync(path).forEach((file) => {
-            var curPath = path + "/" + file;
-            if (fs.lstatSync(curPath).isDirectory()) {
-                deleteFolderRecursive(curPath);
-            } else {
-                fs.unlinkSync(curPath);
-            }
-        });
-        fs.rmdirSync(path);
-    }
-};
 
 describe('PasswordService', () => {
     service = new PasswordService();
@@ -79,6 +67,69 @@ describe('PasswordService', () => {
             user = new PasswdModel('Meliodas');
             assert.equal(service.managerPasswd.has(user), 1);
         });
+    });
+
+    describe('Teste de gets', () => {
+        describe('getUsers', () => {
+            it('Deve retornar todos os usuários.', () => {
+                const users = service.getUsers();
+                assert.notEqual(users, null);
+                assert.equal(users.length, initialLengthPasswd + 4);
+                
+                const first = users[0];
+                assert.notEqual(first, null);
+            });
+            
+            it('Nenhum usuário pode ter campo undefined.', () => {
+                const users = service.getUsers();
+                users.forEach(user => {
+                    Object.keys(user).forEach(attr => {
+                        assert.notEqual(user[attr], null);
+                    });
+                });
+            });
+        });
+
+        describe('getGroups', () => {
+            it('Deve retornar 0 gropos para um usuário recém criado.', () => {
+                const groups = service.getGroups('PaTaTi');
+                assert.notEqual(groups, null);
+                assert.equal(groups.length, 0);
+                
+                const first = groups[0];
+                assert.equal(first, null);
+            });
+
+            it('Nenhum grupo pode ter campo undefined.', () => {
+                const groups = service.getGroups('PaTaTi');
+                groups.forEach(group => {
+                    Object.keys(group).forEach(attr => {
+                        assert.notEqual(group[attr], null);
+                    });
+                });
+            });
+        });
+
+        it('getGroup. Deve retornar o grupo do usuario recém criado.', () => {
+            const group = service.getGroup('PaTaTi');
+            assert.notEqual(group, null);
+            assert.equal(group.name, 'PaTaTi');
+        })
+
+        it('getUser. Não deve alterar a referência.', () => {
+            const user = service.getUser('PaTaTi');
+            assert.notEqual(user, null);
+            assert.equal(user.name, 'PaTaTi');
+            const id = user.id;
+            user.id = 0;
+
+            const user2 = service.getUser('PaTaTi');
+            assert.notEqual(user2, null);
+            assert.notEqual(user2.id, 0);
+        });
+
+        
+
     });
 
     describe('Testes em usuários existêntes', () => {

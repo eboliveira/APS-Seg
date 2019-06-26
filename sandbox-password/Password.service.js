@@ -2,15 +2,52 @@ const b64_sha512crypt = require('sha512crypt-node');
 const crypto = require('crypto');
 const fs = require('fs');
 
+function deleteFolderRecursive(path) {
+    if (fs.existsSync(path)) {
+        fs.readdirSync(path).forEach((file) => {
+            var curPath = path + "/" + file;
+            if (fs.lstatSync(curPath).isDirectory()) {
+                deleteFolderRecursive(curPath);
+            } else {
+                fs.unlinkSync(curPath);
+            }
+        });
+        fs.rmdirSync(path);
+    }
+};
+
+class GroupModel {
+    constructor(group) {
+        const g = group.split(':');
+
+        this.name  = g[0];
+        this.pass  = g[1];
+        this.gid   = g[2];
+        this.users = g[3] ? g[3].split(',') : [];
+    }
+
+    toString() {
+        return `${this.name}:${this.pass}:${this.gid}:` +
+                `${this.users.join(',')}`;
+    }
+
+    equals(other) {
+        return this.name == other.name;
+    }
+
+    copy() {
+        return new GroupModel(this.toString());
+    }
+}
 
 class ShadowModel { 
-    // Link to more informations
+    // Links para mais informações
     // https://www.cyberciti.biz/faq/understanding-etcshadow-file/
     // https://www.tldp.org/LDP/lame/LAME/linux-admin-made-easy/shadow-file-formats.html
     constructor(shadowOfTheColossus) {
-        const s = shadowOfTheColossus.split(":");
+        const s = shadowOfTheColossus.split(':');
 
-        this.user        = s[0];
+        this.name        = s[0];
         this.password    = s[1];
         this.lastchanged = s[2];
         this.minDays     = s[3];
@@ -22,21 +59,27 @@ class ShadowModel {
     }
 
     toString() {
-        return `${this.user}:${this.password}:${this.lastchanged}:` +
+        return `${this.name}:${this.password}:${this.lastchanged}:` +
                 `${this.minDays}:${this.maxDays}:${this.warnDays}:` +
                 `${this.inactive}:${this.expire}:${this.reserved}`;
     }
 
     equals(other) {
-        return this.user === other.user;
+        return this.name === other.name;
+    }
+
+    copy() {
+        return new ShadowModel(this.toString());
     }
 }
 
 class PasswdModel {
+    // Link para mais informações
+    // https://www.cyberciti.biz/faq/understanding-etcpasswd-file-format/
     constructor(passwd) {
-        const p = passwd.split(":");
+        const p = passwd.split(':');
         
-        this.user = p[0];
+        this.name = p[0];
         this.x    = p[1];
         this.id   = parseInt(p[2]);
         this.gid  = parseInt(p[3]);
@@ -46,14 +89,19 @@ class PasswdModel {
     }
 
     toString() {
-        return `${this.user}:${this.x}:${this.id}:${this.gid}:` +
+        return `${this.name}:${this.x}:${this.id}:${this.gid}:` +
                 `${this.info}:${this.home}:${this.cmds}`;
     }
 
     equals(other) {
-        return this.user === other.user;
+        return this.name === other.name;
+    }
+
+    copy() {
+        return new PasswdModel(this.toString());
     }
 }
+
 
 class Manager {
     check() {
@@ -68,8 +116,8 @@ class Manager {
 
         // Armazenando os dados em uma estrutura
         this.objects = this.content
-            .split("\n")
-            .filter(line => line !== "")
+            .split('\n')
+            .filter(line => line !== '')
             .map(line => new this.Model(line));
         
         this.hash = sha512(this.content, this.filename);
@@ -79,7 +127,7 @@ class Manager {
         // Recriando o arquivo com o conteúdo da memória
         this.content = this.objects
             .map(obj => obj.toString())
-            .join("\n");
+            .join('\n');
         fs.writeFileSync(this._filename, this.content);
     }
 
@@ -90,15 +138,14 @@ class Manager {
         * problemas para o seu computador.
         */
         this.filename = filename;
-        this._filename = "./" + filename.replace(new RegExp("/", "g"), ".").slice(1) + ".log" ;
-        console.log(this._filename);
+        this._filename = './' + filename.replace(new RegExp('/', 'g'), '.')
+            .slice(1) + '.log' ;
         this.Model = Model;
-        this.content = "";
-        this.hash = "";
+        this.content = '';
+        this.hash = '';
         this.objects = [];
         this.reload();
-        console.log("Update:", this.objects.length);
-        fs.writeFileSync(this._filename + ".default", this.content);
+        fs.writeFileSync(this._filename + '.default', this.content);
     }
 
     has(Model) {
@@ -126,13 +173,19 @@ class Manager {
     watch(callback) {
         fs.watchFile(this.filename, callback);
     }
+
+    filter(condition) {
+        return this.objects.filter(condition);
+    }
 }
 
 
 class PasswordService {
     constructor() {
-        this.managerPasswd = new Manager("/etc/passwd", PasswdModel);
-        this.managerShadow = new Manager("/etc/shadow", ShadowModel);
+        // TODO: Tratar o arquivo /etc/group também
+        this.managerPasswd = new Manager('/etc/passwd', PasswdModel);
+        this.managerShadow = new Manager('/etc/shadow', ShadowModel);
+        this.managerGroup  = new Manager('/etc/group',  GroupModel);
 
         const ids = this.managerPasswd.objects
             .map(pass => pass.id)
@@ -141,18 +194,22 @@ class PasswordService {
         this.newId = Math.max(ids) + 1;
     }
 
+    // TODO: Remover kargs
+    // TODO: Criar métodos específicos para possíveis alterações
     add(user, password, kargs = {}) {
         /*
         * kargs: infos, cmds, createDir, home
         */
         const createDir = kargs.createDir;
-        const infos = kargs.infos ? kargs.infos : "" ;
+        const infos = kargs.infos ? kargs.infos : '' ;
         const home  = kargs.home  ? kargs.home  : `/home/${user}/` ;
         const cmds  = kargs.cmds  ? kargs.cmds  : `/bin/bash` ;
         // Criando o modelo para o arquivo 'passwd'
         const id = this.newId;
         const userString = `${user}:x:${id}:${id}:${infos}:${home}:${cmds}`;
         const passwdModel = new PasswdModel(userString);
+        const groupString = `${user}:x:${id}:`;
+        const groupModel = new GroupModel(groupString);
 
         // Verificando se este usuário já existe
         const hasUser = this.managerPasswd.has(passwdModel);
@@ -160,7 +217,7 @@ class PasswordService {
             // Criando o modelo para o arquivo 'shadow'
             const salt = `$6$${genRandomString(8)}`;
             const code = b64_sha512crypt.sha512crypt(password, salt);
-            const hash = "$" + code.split("$").slice(4).join("$");
+            const hash = '$' + code.split('$').slice(4).join('$');
             // TODO: Verificar se 'date' corresponde com o valor exigido
             const date = Math.trunc(Date.now() / 3600000);
             const shadowString = `${user}:${hash}:${date}:0:99999:7:::`;
@@ -174,6 +231,7 @@ class PasswordService {
                 }
                 this.managerPasswd.add(passwdModel);
                 this.managerShadow.add(shadowModel);
+                this.managerGroup.add(groupModel);
                 this.newId++;
                 return true;
             }
@@ -196,7 +254,7 @@ class PasswordService {
             return false;
         } 
         // Se chegar aqui, aconteceu algum erro!
-        throw `Erro ao deletar o usuário "${user}"!`
+        throw `Erro ao deletar o usuário '${user}'!`
     }
 
     lock(user) {
@@ -204,7 +262,7 @@ class PasswordService {
         // arquivo 'passwd'
         let i = this.managerPasswd.getIndex(new PasswdModel(user));
         if (i !== -1) {
-            this.managerPasswd.objects[i].x = "!x";
+            this.managerPasswd.objects[i].x = '!x';
             this.managerPasswd.update();
         }
         // Retorna true se o usuário foi encontrado e bloqueado
@@ -216,13 +274,36 @@ class PasswordService {
         // senha (x) arquivo 'passwd'
         let i = this.managerPasswd.getIndex(new PasswdModel(user));
         if (i !== -1) {
-            this.managerPasswd.objects[i].x = "x";
+            this.managerPasswd.objects[i].x = 'x';
             this.managerPasswd.update();
         }
         // Retorna true se o usuário foi encontrado e desbloqueado
         return i !== -1;
     }
 
+    getUsers() {
+        return this.managerPasswd.objects
+            .map(group => group.copy());
+    }
+    getGroups() {
+        return this.managerGroup.objects
+            .map(group => group.copy());
+    }
+
+    getUser(user) {
+        const i = this.managerPasswd.getIndex(new PasswdModel(user));
+        return this.managerPasswd.objects[i].copy();
+    }
+    getGroup(group) {
+        const i = this.managerGroup.getIndex(new GroupModel(group));
+        return this.managerGroup.objects[i].copy(); 
+    }
+    
+    getGroups(user) {
+        return this.managerGroup.filter((group) => {
+            return group.users.includes(user);
+        }).map(group => group.copy());
+    }
 }
 
 function genRandomString(length) {
@@ -242,5 +323,7 @@ function sha512(password, salt) {
 module.exports = {
     PasswordService,
     PasswdModel,
-    ShadowModel
+    ShadowModel,
+    GroupModel,
+    deleteFolderRecursive
 };

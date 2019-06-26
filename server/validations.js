@@ -1,7 +1,15 @@
-const { dbConnection } = require("./database/setup_db");
+const passwd_pattern_controller = require('./database/controllers/passwd_pattern')
+
+function check_mininum_passwd(user_id) {
+  passwd_pattern_controller.getByUserId(user_id).then((res) =>{
+    //not finished yet
+    console.log(res)
+  }, (error) =>{
+    console.log(error)
+  })
+}
+
 
 module.exports = {
-  config_minimun_pattern_passwd: function(informations) {
-    console.log(dbConnection.modelNames());
-  }
+  check_mininum_passwd
 };
