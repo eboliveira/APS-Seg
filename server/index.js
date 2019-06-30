@@ -1,4 +1,5 @@
 const passwd_pattern_controller = require('./database/controllers/passwd_pattern')
+const validations = require('./validations')
 const db = require('./database/setup_db')
 const bodyParser = require('body-parser')
 let express = require('express')
@@ -25,4 +26,9 @@ app.post('/pattern_passwd', (req, res) =>{
 
 app.get('/pattern_passwd', (req,res) =>{
     res.status(200).send(passwd_pattern_controller.get())
+})
+
+app.get('/teste', (req,res) =>{
+    validations.check_mininum_passwd(req.body.user_id)
+    res.status(200).send("Tested")
 })

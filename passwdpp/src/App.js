@@ -1,7 +1,6 @@
 import React, { Component } from "react";
 import logo from "./logo.svg";
 import "./App.css";
-import {setup_models} from './setup_db'
 
 class App extends Component {
   state={
@@ -10,7 +9,6 @@ class App extends Component {
 
   constructor(props) {
     super(props)
-    setup_models()
   }
 
   render() {

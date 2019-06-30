@@ -10,12 +10,15 @@ var passwd_pattern_schema = mongoose.model("passwd_pattern", {
   min_numbers: Number,
   min_special_chars: Number,
   min_all_chars: Number,
-  months_change: Number
+  months_change: Number,
+  user_id:String
 });
+
 var passwd_schema = mongoose.model("passwd", {
   passwd_crypt: String,
   created_date: Date,
-  strength: String
+  strength: String,
+  user_id:String
 });
 
 module.exports = {
