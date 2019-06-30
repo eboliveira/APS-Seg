@@ -8,7 +8,7 @@ const assert = require("assert");
 const fs = require('fs');
 
 
-describe('PasswordService', () => {
+describe('PasswordService v1', () => {
     service = new PasswordService();
     initialLengthPasswd = service.managerPasswd.objects.length;
     initialLengthShadow = service.managerShadow.objects.length;
@@ -39,6 +39,7 @@ describe('PasswordService', () => {
             assert.equal(service.add('PaTaTi', "titati"), true);
             assert.equal(service.add('PaTaTa', 'tatita'), true);
         });
+        
         it('Adicionando usuários inexistêntes (2 personagens)', () => {
             assert.equal(service.add('Saitama', 'punch'), true);
             assert.equal(service.add('Meliodas', 'dark'), true);
@@ -127,9 +128,6 @@ describe('PasswordService', () => {
             assert.notEqual(user2, null);
             assert.notEqual(user2.id, 0);
         });
-
-        
-
     });
 
     describe('Testes em usuários existêntes', () => {
