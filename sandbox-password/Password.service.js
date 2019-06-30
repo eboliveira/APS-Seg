@@ -17,6 +17,21 @@ function deleteFolderRecursive(path) {
 };
 
 class GroupModel {
+    /**
+     * Atributos:
+     *
+     * @param {string} name 
+     *     Representa o nome do grupo.
+     * @param {string} pass
+     *     Representa uma referência para a senha do grupo.
+     * @param {number} gid
+     *     Representa o ID do grupo.
+     * @param {Array<string>} users
+     *     Representa a lista de usuários pertencentes a esse grupo.
+     *
+     * links para mais informações:
+     *      https://www.cyberciti.biz/faq/understanding-etcgroup-file/
+     */
     constructor(group) {
         const g = group.split(':');
 
@@ -41,10 +56,39 @@ class GroupModel {
 }
 
 class ShadowModel { 
-    // Links para mais informações
-    // https://www.cyberciti.biz/faq/understanding-etcshadow-file/
-    // https://www.tldp.org/LDP/lame/LAME/linux-admin-made-easy/shadow-file-formats.html
-    constructor(shadowOfTheColossus) {
+    /**
+     * Atributos:
+     *
+     * @param {string} name
+     *      Representa o nome do usuário vinculado a senha.
+     * @param {string} password
+     *      Senha do usuário oculta usando sha512.
+     * @param {number} lastchange
+     *      Data da última mudança na senha, dada em milisegundos.
+     * @param {number} minDays
+     *      Tempo minima para poder fazer a primeira mudança.
+     *      0: Representa que as mudanças podem ser feitas a qualquer
+     *      momento.
+     * @param {number} maxDays
+     *      Tempo máximo para ser necessário mudar a senha.
+     *      99999: Representa que o usuário não precisa alterar a senha
+     *      por um longo período de tempo.
+     * @param {number} warnDays
+     *      Tempo para alertar o usuário da necessidade de se alterar a 
+     *      senha.
+     * @param {number} inactive
+     *      Número de dias que a conta se tornou inativa por algum
+     *      critério de tempo.
+     * @param {number} expire
+     *      Tempo absoluto da validade da conta.
+     * @param {number} reserved
+     *      Campo reservado para necessidades futuras.
+     *
+     * Links para mais informações:
+     *      https://www.cyberciti.biz/faq/understanding-etcshadow-file/
+     * https://www.tldp.org/LDP/lame/LAME/linux-admin-made-easy/shadow-file-formats.html
+     */
+     constructor(shadowOfTheColossus) {
         const s = shadowOfTheColossus.split(':');
 
         this.name        = s[0];
@@ -74,9 +118,32 @@ class ShadowModel {
 }
 
 class PasswdModel {
-    // Link para mais informações
-    // https://www.cyberciti.biz/faq/understanding-etcpasswd-file-format/
-    constructor(passwd) {
+    /**
+     * Atributos:
+     * 
+     * @param {string} name
+     *      Representa o nome do usuário vinculado a estas informações.
+     * @param {string} x
+     *      Representa um link simbólico para sua senha, indicando que
+     *      uma senha criptografada foi armazenada em /etc/shadow.
+     * @param {string} id
+     *      ID numérico do usuário no sistema.
+     * @param {string} gid
+     *      ID do grupo do usuário no sistema.
+     * @param {string} info
+     *      Comentários sobre informações extras sobre o usuário, como
+     *      nome completo, telefone, etc.
+     * @param {string} home
+     *      Caminho absoluto até o diretório do usuário. Se o diretório
+     *      não existir, é usado o diretório raiz, /.
+     * @param {string} cmds
+     *      Caminho absoluto dos comandos ou shell que é permitido para
+     *      o usuário.
+     * 
+     * Links para mais informações:
+     * https://www.cyberciti.biz/faq/understanding-etcpasswd-file-format/
+     */
+     constructor(passwd) {
         const p = passwd.split(':');
         
         this.name = p[0];
@@ -183,9 +250,9 @@ class Manager {
 class PasswordService {
     constructor() {
         // TODO: Tratar o arquivo /etc/group também
-        this.managerPasswd = new Manager('/etc/passwd', PasswdModel);
-        this.managerShadow = new Manager('/etc/shadow', ShadowModel);
-        this.managerGroup  = new Manager('/etc/group',  GroupModel);
+        this.managerPasswd = new Manager('./etc.passwd.log', PasswdModel);
+        this.managerShadow = new Manager('./etc.shadow.log', ShadowModel);
+        this.managerGroup  = new Manager('./etc.group.log',  GroupModel);
 
         const ids = this.managerPasswd.objects
             .map(pass => pass.id)
