@@ -69,7 +69,7 @@ function validPassword(password, lengthSeqChars=3, lengthSeqNumbers=3) {
             hasUpperCaseChar: false,
         }
     };
-    if (typeof password !== "string" || password === "") {
+    if (typeof password !== "string") {
         res.invalid = true;
         return res;
     }
