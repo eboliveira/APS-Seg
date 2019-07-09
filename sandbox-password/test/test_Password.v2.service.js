@@ -59,10 +59,33 @@ describe("PasswordService v2", () => {
         });
 
         it("getUser", () => {
-            assert.notEqual(service.getUser("PaTaTi"), null);
-            assert.notEqual(service.getUser("PaTaTa"), null);
-            assert.notEqual(service.getUser("Saitama"), null);
-            assert.notEqual(service.getUser("Meliodas"), null);
+            let user = service.getUser("PaTaTi");
+            assert.notEqual(user, null);
+            assert.equal(user.name, "PaTaTi");
+            assert.equal(user.x, "x");
+            assert.equal(user.id, 2001);
+            assert.equal(user.gid, 2001);
+
+            user = service.getUser("PaTaTa");
+            assert.notEqual(user, null);
+            assert.equal(user.name, "PaTaTa");
+            assert.equal(user.x, "x");
+            assert.equal(user.id, 2002);
+            assert.equal(user.gid, 2002);
+
+            user = service.getUser("Saitama");
+            assert.notEqual(user, null);
+            assert.equal(user.name, "Saitama");
+            assert.equal(user.x, "x");
+            assert.equal(user.id, 2003);
+            assert.equal(user.gid, 2003);
+
+            user = service.getUser("Meliodas");
+            assert.notEqual(user, null);
+            assert.equal(user.name, "Meliodas");
+            assert.equal(user.x, "x");
+            assert.equal(user.id, 2004);
+            assert.equal(user.gid, 2004);
         });
 
         it("getGroup", () => {

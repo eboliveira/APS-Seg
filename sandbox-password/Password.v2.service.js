@@ -199,14 +199,12 @@ class ModelDAO {
         this.obj = obj;
     }
 
-    // TODO: Remover este método
     _save(content) { // Private
-        if(this.valid()) {
+        if(this.valid().value) {
             fs.writeFileSync(this.filename, content + "\n");
-        } else {
-            console.log("Object invalid");
-            console.warn(obj);
+            return true;
         }
+        return false;
     }
 
     watch(callback) {
@@ -216,14 +214,14 @@ class ModelDAO {
     add() { // Create
         const list = this.list();
         list.push(this.obj);
-        this._save(list.join("\n"));
+        return this._save(list.join("\n"));
     }
 
     get(pk) { // Read
         const result = this.filter(obj => {
             return obj.getPrimaryKey() === pk;
         });
-        if (result.length === 1 && result[0].validAttrs()) {
+        if (result.length === 1) {
             this.obj = result[0];
             return this.obj;
         }
@@ -267,20 +265,7 @@ class ModelDAO {
     }
 
     valid() {
-        const res = this.obj.validAttrs();
-        if (!res.attrs.includes("id")) {
-            if (this.obj.id <= 1000 || this.obj.id >= 60000) {
-                res.value = false;
-                res.attrs.push("id");
-            }
-        } 
-        if (!res.attrs.includes("gid")) {
-            if (this.obj.gid <= 1000 || this.obj.gid >= 60000) {
-                res.value = false;
-                res.attrs.push("gid");
-            }
-        }       
-        return res;
+        return this.obj.validAttrs();
     }
 }
 
@@ -346,7 +331,9 @@ class PasswdModel extends ModelDAO {
 
     create(user, id) {
         // "username:x:id:gid:info:home:cmd"
-        const string = `${user}:x:${id}:${id}:::`;
+        const defaultHome = `/home/${user}`;
+        const defaultCmds = `/bin/bash`;
+        const string = `${user}:x:${id}:${id}::${defaultHome}:${defaultCmds}`;
         return this.obj.fromString(string);
     }
 
@@ -358,6 +345,42 @@ class PasswdModel extends ModelDAO {
     unlock() {
         this.obj.x = "x";
         this.update();
+    }
+
+    valid() {
+        const res = this.obj.validAttrs();
+        const regexPaths = /^[^\/]|[\/]$/; // Deve começar com '/' e terminar sem '/'
+        if (!res.attrs.includes("id")) {
+            if (this.obj.id <= 1000 || this.obj.id >= 60000) {
+                res.value = false;
+                res.attrs.push("id");
+            }
+        } 
+        if (!res.attrs.includes("gid")) {
+            if (this.obj.gid <= 1000 || this.obj.gid >= 60000) {
+                res.value = false;
+                res.attrs.push("gid");
+            }
+        }
+        if (!res.attrs.includes("home")) {
+            if (this.obj.home !== "" && regexPaths.test(this.obj.home)) {
+                res.value = false;
+                res.attrs.push("home");
+            }
+        }
+        if (!res.attrs.includes("cmds")) {
+            if (this.obj.cmds !== "") {
+                const hasInvalidCmds = this.obj.cmds
+                    .split(",")
+                    .filter(cmd => regexPaths.test(cmd));
+                if(hasInvalidCmds.length !== 0) {
+                    res.value = false;
+                    res.attrs.push("cmds");
+                }
+            }
+        }
+
+        return res;
     }
 }
 
@@ -371,13 +394,13 @@ class PasswordService {
             .map(pass => pass.id)
             .filter(id => id >= 1000 && id < 10000);
         
-        this.userId = Math.max(ids) + 1;
+        this.userId = Math.max.apply(Math, [1000].concat(ids)) + 1;
         
         ids = this.managerGroup.list()
             .map(group => group.gid)
             .filter(id => id >= 1000 && id < 10000);
 
-        this.groupId = Math.max(ids) + 1;
+        this.groupId = Math.max.apply(Math, [1000].concat(ids)) + 1;
     }
 
     addUser(user, password) {
@@ -387,14 +410,22 @@ class PasswordService {
         const groupObj = this.managerGroup.get(user);
         
         if (!userObj && !shadowObj && !groupObj) {
+            var res = true;
             this.managerPasswd.create(user, this.userId);
-            this.managerPasswd.add();
+            res = res && this.managerPasswd.add();
             this.managerShadow.create(user, password);
-            this.managerShadow.add();
+            res = res && this.managerShadow.add();
             this.managerGroup.create(user, this.userId);
-            this.managerGroup.add();
-            this.userId++;
-            return true;
+            res = res && this.managerGroup.add();
+
+            if (res) {
+                this.userId++;
+                return true;
+            }
+            // Rollback
+            this.managerPasswd.del();
+            this.managerShadow.del();
+            this.managerGroup.del();
         }
 
         return false;
@@ -421,9 +452,10 @@ class PasswordService {
         const groupObj = this.managerGroup.get(group);
         if (!groupObj) {
             this.managerGroup.create(group, this.groupId);
-            this.managerGroup.add();
-            this.groupId++;
-            return true;
+            if (this.managerGroup.add()) {
+                this.groupId++;
+                return true;
+            }
         }
         return false;
     }
