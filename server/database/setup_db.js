@@ -14,15 +14,15 @@ var passwd_pattern_schema = mongoose.model("passwd_pattern", {
   user_id:String
 });
 
-var passwd_schema = mongoose.model("passwd", {
-  passwd_crypt: String,
-  created_date: Date,
-  strength: String,
-  user_id:String
-});
+var log_schema = mongoose.model('log', {
+  type:String,
+  dt_occurred:String,
+  user_id:Number,
+})
+
 
 module.exports = {
   dbConnection: mongoose.connection,
   passwd_pattern_schema:passwd_pattern_schema,
-  passwd_schema:passwd_schema
+  log_schema:log_schema,
 };
