@@ -5,10 +5,22 @@ import Card from '@material-ui/core/Card'
 import CardContent from '@material-ui/core/CardContent'
 import CardHeader from '@material-ui/core/CardHeader'
 import UserIcon from '@material-ui/icons/AssignmentInd'
-import Typography from '@material-ui/core/Typography';
+import Typography from '@material-ui/core/Typography'
+
+import RecentEvents from './RecentEvents'
 
 
 export class Dashboard extends Component {
+    constructor(props) {
+        super(props)
+        this.state = {
+            events: [{
+                "id":1,
+                "description":"Usuário Criado",
+                "date":"01/07/2019"
+            }]
+        }
+    }
     render() {
         return (
             <Fragment>
@@ -61,11 +73,10 @@ export class Dashboard extends Component {
                         </Card>
                     </Grid>
                     <Grid item xs={12} md={4}>
-                        <Card>
-                            <CardHeader title="Últimos eventos" />
-                            <CardContent>
-                            </CardContent>
-                        </Card>
+                        <RecentEvents
+                            nb = {this.state.events.length}
+                            events = {this.state.events}
+                        />
                     </Grid>
                 </Grid>
             </Fragment>
