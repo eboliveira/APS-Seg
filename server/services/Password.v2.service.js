@@ -1,8 +1,5 @@
-const b64_sha512crypt = require("sha512crypt-node");
 const fs = require("fs");
-const {
-    genRandomString
-} = require("./Utils");
+const { generateHashPassword } = require("./Utils");
 
 // POJO: Interface
 class Pojo {
@@ -271,7 +268,7 @@ class ModelDAO {
 
 class GroupModel extends ModelDAO {
     constructor() {
-        super("etc.group.log", new GroupPojo());
+        super("./log/etc.group.log", new GroupPojo());
     }
 
     addUser(user) {
@@ -309,14 +306,12 @@ class GroupModel extends ModelDAO {
 
 class ShadowModel extends ModelDAO { 
     constructor() {
-        super("etc.shadow.log", new ShadowPojo());
+        super("./log/etc.shadow.log", new ShadowPojo());
     }
 
     create(user, password) {
         // "username:criptpass:date:mindays:maxdays:warndays:expired:reserved"
-        const salt = `$6$${genRandomString(8)}`;
-        const code = b64_sha512crypt.sha512crypt(password, salt);
-        const hash = "$" + code.split("$").slice(4).join("$");
+        const hash = generateHashPassword(password);
         // TODO: Verificar se "date" corresponde com o valor exigido
         const date = Math.trunc(Date.now() / 3600000);
         const shadowString = `${user}:${hash}:${date}:0:99999:7:::`;
@@ -326,7 +321,7 @@ class ShadowModel extends ModelDAO {
 
 class PasswdModel extends ModelDAO {
     constructor() {
-        super("etc.passwd.log", new PasswdPojo());
+        super("./log/etc.passwd.log", new PasswdPojo());
     }
 
     create(user, id) {
@@ -405,24 +400,35 @@ class PasswordService {
 
     addUser(user, password) {
         // Verificando se "user" ja existe como usuário ou grupo
-        const userObj = this.managerPasswd.get(user);
-        const shadowObj = this.managerShadow.get(user);
-        const groupObj = this.managerGroup.get(user);
+        var userObj = this.managerPasswd.get(user);
+        var shadowObj = this.managerShadow.get(user);
+        var groupObj = this.managerGroup.get(user);
         
         if (!userObj && !shadowObj && !groupObj) {
-            var res = true;
-            this.managerPasswd.create(user, this.userId);
-            res = res && this.managerPasswd.add();
-            this.managerShadow.create(user, password);
-            res = res && this.managerShadow.add();
-            this.managerGroup.create(user, this.userId);
-            res = res && this.managerGroup.add();
+            console.log("ADD");
+            try {
+                var res = true;
+                console.log("ADD", res);
 
-            if (res) {
-                this.userId++;
-                return true;
-            }
+                this.managerPasswd.create(user, this.userId);
+                res = res && this.managerPasswd.add();
+                this.managerShadow.create(user, password);
+                res = res && this.managerShadow.add();
+                this.managerGroup.create(user, this.userId);
+                res = res && this.managerGroup.add();
+
+                console.log("ADD", res);
+                if (res) {
+                    this.userId++;
+                    return true;
+                }
+            } catch (e) {
+                console.log(e);
+            }               
             // Rollback
+            this.managerPasswd.get(user);
+            this.managerShadow.get(user);
+            this.managerGroup.get(user);
             this.managerPasswd.del();
             this.managerShadow.del();
             this.managerGroup.del();
@@ -521,6 +527,7 @@ class PasswordService {
     }
 
     getUser(user) {
+        this.managerShadow.get(user);
         return this.managerPasswd.get(user);
     }
     getGroup(group) {
