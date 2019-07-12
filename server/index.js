@@ -5,10 +5,21 @@ const validations = require("./validations");
 const db = require("./database/setup_db");
 const bodyParser = require("body-parser");
 const moment = require('moment')
-let express = require("express");
+const express = require("express");
 
-let app = express();
-let port = 8080;
+
+const { PasswordService } = require("./services/Password.v2.service.js");
+const Utils = require("./services/Utils.js");
+
+
+const app = express();
+const port = 8080;
+
+const PasswdSrv = new PasswordService();
+
+function now() {
+  return moment(new Date()).format('DD/MM/YYYY');
+}
 
 app.use(bodyParser.json());
 
@@ -26,29 +37,45 @@ app.post("/pattern_passwd", (req, res) => {
 });
 
 app.get("/pattern_passwd", (req, res) => {
-  passwd_pattern_controller.getByUserId(req.headers.user_id).then(resp => {
+  passwd_pattern_controller.getByUserId(req.body.user_id).then(resp => {
     res.status(200).send(resp);
   });
 });
 
 //criar usuário
 app.post("/user", (req, res) => {
-
-
-    create_log(req.headers.user_id, 'create user', moment(new Date()).format('DD/MM/YYYY'))
-    res.status(200).send('received')
+  const { username, password, user_id } = req.body;
+  const res_service = PasswdSrv.addUser(username, password);
+  const user = PasswdSrv.getUser(username);
+ 
+  if (res_service) {
+    // create_log(user_id, 'create user', now());
+    res.status(201).send(user);
+  } else {
+    res.status(400).send("Bad request");
+  }
 });
 
 //alterar usuário
 app.put("/user", (req, res) => {
-    
-    create_log(req.headers.user_id, 'alter user', moment(new Date()).format('DD/MM/YYYY'))
+  const res_service = PasswdSrv
+    .getUser(req.body.username);
+  
+  if (req.body.password) {
+    PasswdSrv.managerShadow.obj.password = 
+      Utils.generateHashPassword(req.body.password);
+    PasswdSrv.managerShadow.add();
+  }
+  
+
+
+  create_log(req.body.user_id, 'alter user', now());
 });
 
 //deletar usuário
 app.delete("/user", (req, res) => {
-    
-    create_log(req.headers.user_id, 'delete user', moment(new Date()).format('DD/MM/YYYY'))
+  
+  create_log(req.body.user_id, 'delete user', now());
 });
 
 //obter os registros de eventos
