@@ -1,10 +1,9 @@
 const passwd_pattern_controller = require("./database/controllers/passwd_pattern");
 const logs_controller = require("./database/controllers/logs");
-const create_log = require("./database/controllers/logs");
 const validations = require("./validations");
 const db = require("./database/setup_db");
 const bodyParser = require("body-parser");
-const moment = require('moment')
+const moment = require("moment");
 let express = require("express");
 
 let app = express();
@@ -26,7 +25,7 @@ app.post("/pattern_passwd", (req, res) => {
 });
 
 app.get("/pattern_passwd", (req, res) => {
-  passwd_pattern_controller.getByUserId(req.headers.user_id).then(resp => {
+  passwd_pattern_controller.getByUserId(req.body.user_id).then(resp => {
     res.status(200).send(resp);
   });
 });
@@ -35,28 +34,44 @@ app.get("/pattern_passwd", (req, res) => {
 app.post("/user", (req, res) => {
 
 
-    create_log(req.headers.user_id, 'create user', moment(new Date()).format('DD/MM/YYYY'))
-    res.status(200).send('received')
+  logs_controller.insert(
+    req.body.user_id,
+    "create user",
+    moment(new Date()).format("DD/MM/YYYY"),
+    req.body.user_id_target
+  );
+  res.status(200).send("received");
 });
 
 //alterar usuário
 app.put("/user", (req, res) => {
-    
-    create_log(req.headers.user_id, 'alter user', moment(new Date()).format('DD/MM/YYYY'))
+
+
+  logs_controller.insert(
+    req.body.user_id,
+    "alter user",
+    moment(new Date()).format("DD/MM/YYYY"),
+    req.body.user_id_target
+  );
 });
 
 //deletar usuário
 app.delete("/user", (req, res) => {
-    
-    create_log(req.headers.user_id, 'delete user', moment(new Date()).format('DD/MM/YYYY'))
+
+  logs_controller.insert(
+    req.body.user_id,
+    "delete user",
+    moment(new Date()).format("DD/MM/YYYY"),
+    req.body.user_id_target
+  );
 });
 
 //obter os registros de eventos
 app.get("/logs", (req, res) => {
-
+  logs_controller.get().then((resp) =>{
+    res.status(200).send(resp)
+  })
 });
 
 //verificar senha
-app.get("/check_passwd", (req, res) => {
-
-});
+app.get("/check_passwd", (req, res) => {});

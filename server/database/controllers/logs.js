@@ -1,10 +1,11 @@
 const db = require("./../setup_db");
 
-function insert(log) {
+function insert(log_user_id ,log_type, log_dt_occurred, log_user_id_target) {
   var log_instance = new db.log_schema({
-    type:log.type,
-    dt_occurred:log.dt_occurred,
-    user_id:log.user_id,
+    type:log_type,
+    dt_occurred:log_dt_occurred,
+    user_id:log_user_id,
+    user_id_target:log_user_id_target
   });
   log_instance.save((err, res) =>{
       if (err) return console.error(err)
@@ -12,18 +13,19 @@ function insert(log) {
     })
 }
 
-function create_log(user_id, type, dt_occurred){
-    var log = {}
-    log.user_id = user_id
-    log.type = type
-    log.dt_occurred = dt_occurred
-    // log.user_id_affected = req.body.user_id_affected
-    logs_controller.insert(log)
+function clean(){
 }
 
-function clean(){
+function get(){
+  return new Promise((resolve, reject) =>{
+    db.log_schema.find( (err, res) =>{
+        if (err) reject(err)
+        resolve(res)
+    })
+  })
 }
 
 module.exports = {
   insert,
+  get,
 };
