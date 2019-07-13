@@ -405,10 +405,8 @@ class PasswordService {
         var groupObj = this.managerGroup.get(user);
         
         if (!userObj && !shadowObj && !groupObj) {
-            console.log("ADD");
             try {
                 var res = true;
-                console.log("ADD", res);
 
                 this.managerPasswd.create(user, this.userId);
                 res = res && this.managerPasswd.add();
@@ -417,7 +415,6 @@ class PasswordService {
                 this.managerGroup.create(user, this.userId);
                 res = res && this.managerGroup.add();
 
-                console.log("ADD", res);
                 if (res) {
                     this.userId++;
                     return true;

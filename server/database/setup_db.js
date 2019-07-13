@@ -17,7 +17,8 @@ var passwd_pattern_schema = mongoose.model("passwd_pattern", {
 var log_schema = mongoose.model('log', {
   type:String,
   dt_occurred:String,
-  user_id:Number,
+  user_id:String,
+  user_id_target:String
 })
 
 
