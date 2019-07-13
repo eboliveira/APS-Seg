@@ -41,7 +41,7 @@ export class RecentEvents extends Component {
         return (
             <div className={classes.main}>
                 <CardIcon Icon={CommentIcon} bgColor="#4caf50" />
-                <Card className={classes.card} style={{ overflow: 'inherit !important' }}>
+                <Card className={classes.card} style={{ overflow: 'visible' }}>
                     <CardContent>
                         <Typography className={classes.title} color="textSecondary">
                             {"Últimos eventos"}
