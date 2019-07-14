@@ -525,11 +525,13 @@ class PasswordService {
     }
 
     getUser(user) {
-        this.managerShadow.get(user);
         return this.managerPasswd.get(user);
     }
     getGroup(group) {
         return this.managerGroup.get(group);
+    }
+    getPass(user) {
+        return this.managerShadow.get(user);
     }
 
     getGroupsOfUser(user) {
