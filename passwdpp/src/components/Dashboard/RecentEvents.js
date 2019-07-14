@@ -44,7 +44,7 @@ export class RecentEvents extends Component {
                 <Card className={classes.card} style={{ overflow: 'inherit !important' }}>
                     <CardContent>
                         <Typography className={classes.title} color="textSecondary">
-                            {"Últimos eventos"}
+                            {"Últimos eventos (limite 10)"}
                         </Typography>
                         <Typography
                             variant="headline"
@@ -58,14 +58,11 @@ export class RecentEvents extends Component {
                             {this.props.events.map(record => (
                                 <ListItem
                                     button
-                                    // to={`/${record.id}`}
-                                    // component={Link}
-                                    key={record.id}
                                 >
                                     <CommentIcon style={{ fontSize: "1em" }} />
                                     <ListItemText
-                                        primary={record.description}
-                                        secondary={record.date}
+                                        primary={`Usuário ${record.user_id} ${record.type} usuário ${record.user_id_target}`}
+                                        secondary={record.dt_occurred}
                                         className={classes.listItemText}
                                     />
                                 </ListItem>
