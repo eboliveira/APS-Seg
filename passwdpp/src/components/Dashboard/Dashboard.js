@@ -1,5 +1,6 @@
 import React, { Component, Fragment } from 'react'
 
+import { GET_LIST } from 'react-admin'
 import Grid from '@material-ui/core/Grid'
 import Card from '@material-ui/core/Card'
 import CardContent from '@material-ui/core/CardContent'
@@ -8,19 +9,40 @@ import UserIcon from '@material-ui/icons/AssignmentInd'
 import Typography from '@material-ui/core/Typography'
 
 import RecentEvents from './RecentEvents'
+import { dataProvider } from '../../Utils'
 
+async function getResource(resource) {
+    return await dataProvider(GET_LIST, resource, {}).then(evts => {
+        return evts
+    })
+}
 
 export class Dashboard extends Component {
     constructor(props) {
         super(props)
+
         this.state = {
-            events: [{
-                "id":1,
-                "description":"Usuário Criado",
-                "date":"01/07/2019"
-            }]
+            events: [],
+            usersTotal: 0
         }
     }
+
+    componentDidMount() {
+        getResource("logs").then(evnts => {
+            this.setState({
+                ...this.state,
+                events: evnts.data
+            })
+        })
+        getResource("user").then(users => {
+            this.setState({
+                ...this.state,
+                usersTotal: users.total
+            })
+        })
+    }
+    
+
     render() {
         return (
             <Fragment>
@@ -52,7 +74,7 @@ export class Dashboard extends Component {
                                                 <UserIcon style={{ fontSize: "4em" }} />
                                             </Grid>
                                             <Grid item style={{ textAlign: "start" }} xs={6}>
-                                                <span style={{ fontSize: "3em" }}>50</span>
+                                                <span style={{ fontSize: "3em" }}>{this.state.usersTotal}</span>
                                             </Grid>
                                         </Grid>
 
@@ -74,8 +96,8 @@ export class Dashboard extends Component {
                     </Grid>
                     <Grid item xs={12} md={4}>
                         <RecentEvents
-                            nb = {this.state.events.length}
-                            events = {this.state.events}
+                            nb={this.state.events.length}
+                            events={this.state.events}
                         />
                     </Grid>
                 </Grid>

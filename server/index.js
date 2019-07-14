@@ -92,7 +92,7 @@ app.post("/user", (req, res) => {
     }
 
     if (res_service && user_id != "undefined") {
-        logs_controller.insert(user_id, "create user", now(), user.id);
+        logs_controller.insert(user_id, "criou", now(), user.id);
         res.status(201).send(user);
     } else {
         res.status(400).send("Bad Request");
@@ -105,8 +105,17 @@ app.put("/user/:username", (req, res) => {
     const { x, info, password, user_id, user_id_target, home, cmds, name } = req.body;
     const username = req.params.username;
 
-    const user = PasswdSrv
-        .getUser(username)
+    var user = PasswdSrv.getUser(username)
+    var shadow = PasswdSrv.managerShadow.get(username)
+    var group = PasswdSrv.getGroup(username)
+
+    var userAll = PasswdSrv.getUsers()
+    var shadowAll = PasswdSrv.managerShadow.list()
+    var groupAll = PasswdSrv.managerGroup.list()
+
+    var indexUser = -1
+    var indexShadow = -1
+    var indexGroup = -1
 
     if (!user) {
         res.status(400).send("Bad Request");
@@ -118,32 +127,75 @@ app.put("/user/:username", (req, res) => {
         PasswdSrv.lock()
     }
 
-    if (name && name != undefined) {
-        PasswdSrv.managerPasswd.obj.name = name
+    if (name != undefined) {
+        user.name = name
     }
-    if (home && home != undefined) {
-        PasswdSrv.managerPasswd.obj.home = home
+    if (home != undefined) {
+        user.home = home
     }
-    if (cmds && cmds != undefined) {
-        PasswdSrv.managerPasswd.obj.cmds = cmds
+    if (cmds != undefined) {
+        user.cmds = cmds
     }
-    if (info && info != undefined) {
-        PasswdSrv.managerPasswd.obj.info = info
+    if (info != undefined) {
+        user.info = info
     }
 
-    PasswdSrv.managerPasswd.add()
+    for (let i = 0; i < userAll.length; i++) {
+        const u = userAll[i];
+        if (u.name === username) {
+            indexUser = i
+            break
+        }
+    }
 
-    if (password) {
+    if (indexUser >= 0) {
+        userAll.splice(indexUser, 1, user)
+    }
+
+    if (user.name != username) {
+        group.name = user.name
+
+        for (let i = 0; i < groupAll.length; i++) {
+            const u = groupAll[i];
+            if (u.name === username) {
+                indexGroup = i
+                break
+            }
+        }
+
+        if (indexGroup >= 0) {
+            groupAll.splice(indexGroup, 1, group)
+        }
+
+        shadow.name = user.name
+    }
+
+    if (password != undefined) {
+
         // TODO: Validar a força da senha
-        PasswdSrv.managerShadow.obj.password =
+        shadow.password =
             Utils.generateHashPassword(password);
-        PasswdSrv.managerShadow.add();
     }
 
-    const newUser = PasswdSrv
-        .getUser(username)
+    for (let i = 0; i < shadowAll.length; i++) {
+        const u = shadowAll[i];
+        if (u.name === username) {
+            indexShadow = i
+            break
+        }
+    }
 
-    logs_controller.insert(user_id, "alter user", now(), user_id_target);
+    if (indexShadow >= 0) {
+        shadowAll.splice(indexShadow, 1, shadow)
+    }
+
+    PasswdSrv.managerPasswd._save(userAll.join("\n"))
+    PasswdSrv.managerShadow._save(shadowAll.join("\n"))
+    PasswdSrv.managerGroup._save(groupAll.join("\n"))
+
+    const newUser = PasswdSrv.getUser(username)
+
+    logs_controller.insert(user_id, "alterou", now(), user_id_target);
 
     res.status(200).send(newUser);
 });
@@ -154,7 +206,7 @@ app.delete("/user", (req, res) => {
     const res_service = PasswdSrv.removeUser(username);
 
     if (res_service) {
-        logs_controller.insert(user_id, "delete user", now(), user_id_target);
+        logs_controller.insert(user_id, "deletou", now(), user_id_target);
         res.status(201).send(user_id_target);
     } else {
         res.status(400).send("Bad request");

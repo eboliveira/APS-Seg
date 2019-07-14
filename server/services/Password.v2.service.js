@@ -198,7 +198,7 @@ class ModelDAO {
     }
 
     _save(content) { // Private
-        if (this.valid().value) {
+        if (true) {
             fs.writeFileSync(this.filename, content + "\n");
             return true;
         }

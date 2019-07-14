@@ -41,6 +41,8 @@ function parseResponse(res, type) {
                 return { data: data, total: data.length }
             case CREATE:
                 return { data: { data, id: data.id } }
+            case UPDATE:
+                return { data: { data, id: data.id } }
             default:
                 return { data: data }
         }
@@ -66,9 +68,9 @@ export function dataProvider(type, resource, params) {
     console.log(params);
     console.log('X X X X X X X X X X');
 
-    // if (params.data) {
-    //     params.data.user_id = 'teste'
-    // }
+    if (params.data) {
+        params.data.user_id = 'teste'
+    }
 
     switch (type) {
         case GET_LIST:
