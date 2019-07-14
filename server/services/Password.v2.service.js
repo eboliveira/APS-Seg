@@ -529,7 +529,7 @@ class PasswordService {
     getGroup(group) {
         return this.managerGroup.get(group); 
     }
-    getPass() {
+    getPass(user) {
         return this.managerShadow.get(user);
     }
 
