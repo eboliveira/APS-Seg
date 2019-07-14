@@ -6,7 +6,7 @@ class Pojo {
     getPrimaryKey() {} // POJO
 
     fromString(line) {} // POJO
-    
+
     toString() {} // POJO
 
     validAttrs() {
@@ -46,7 +46,7 @@ class GroupPojo extends Pojo {
      * Links para mais informações:
      *      https://www.cyberciti.biz/faq/understanding-etcgroup-file/
      */
-    constructor(){
+    constructor() {
         super();
     }
 
@@ -55,19 +55,19 @@ class GroupPojo extends Pojo {
          * Esta função se constroi a partir de uma string separada por ":".
          */
         const g = string.split(":");
-        
-        this.name  = g[0];
-        this.pass  = g[1];
-        this.gid   = g[2];
+
+        this.name = g[0];
+        this.pass = g[1];
+        this.gid = g[2];
         this.users = g[3] ? g[3].split(",") : [];
         return this;
     }
 
     toString() { // Override
         return `${this.name}:${this.pass}:${this.gid}:` +
-                `${this.users.join(",")}`;
+            `${this.users.join(",")}`;
     }
-    
+
     getPrimaryKey() { // Override
         return this.name;
     }
@@ -106,29 +106,29 @@ class ShadowPojo extends Pojo {
      *      https://www.cyberciti.biz/faq/understanding-etcshadow-file/
      * https://www.tldp.org/LDP/lame/LAME/linux-admin-made-easy/shadow-file-formats.html
      */
-    constructor(){
+    constructor() {
         super();
     }
 
     fromString(shadowOfTheColossus) { // Override
         const s = shadowOfTheColossus.split(":");
 
-        this.name       = s[0];
-        this.password   = s[1];
+        this.name = s[0];
+        this.password = s[1];
         this.lastchange = s[2];
-        this.minDays    = s[3];
-        this.maxDays    = s[4];
-        this.warnDays   = s[5];
-        this.inactive   = s[6];
-        this.expire     = s[7];
-        this.reserved   = s[8];
+        this.minDays = s[3];
+        this.maxDays = s[4];
+        this.warnDays = s[5];
+        this.inactive = s[6];
+        this.expire = s[7];
+        this.reserved = s[8];
         return this;
     }
 
     toString() { // Override
         return `${this.name}:${this.password}:${this.lastchange}:` +
-                `${this.minDays}:${this.maxDays}:${this.warnDays}:` +
-                `${this.inactive}:${this.expire}:${this.reserved}`;
+            `${this.minDays}:${this.maxDays}:${this.warnDays}:` +
+            `${this.inactive}:${this.expire}:${this.reserved}`;
     }
 
     getPrimaryKey() { // Override
@@ -162,17 +162,18 @@ class PasswdPojo extends Pojo {
      * Links para mais informações:
      * https://www.cyberciti.biz/faq/understanding-etcpasswd-file-format/
      */
-    constructor(){
+    constructor() {
         super();
     }
 
     fromString(passwd) { // Override
         const p = passwd.split(":");
-        
+
         this.name = p[0];
-        this.x    = p[1];
-        this.id   = parseInt(p[2]);
-        this.gid  = parseInt(p[3]);
+        this.id = p[0];
+        this.x = p[1] === 'x' ? true : false;
+        this.uid = parseInt(p[2]);
+        this.gid = parseInt(p[3]);
         this.info = p[4];
         this.home = p[5];
         this.cmds = p[6];
@@ -180,8 +181,8 @@ class PasswdPojo extends Pojo {
     }
 
     toString() { // Override
-        return `${this.name}:${this.x}:${this.id}:${this.gid}:` +
-                `${this.info}:${this.home}:${this.cmds}`;
+        return `${this.name}:${this.x ? 'x':'!x'}:${this.uid}:${this.gid}:` +
+            `${this.info}:${this.home}:${this.cmds}`;
     }
 
     getPrimaryKey() { // Override
@@ -197,7 +198,7 @@ class ModelDAO {
     }
 
     _save(content) { // Private
-        if(this.valid().value) {
+        if (this.valid().value) {
             fs.writeFileSync(this.filename, content + "\n");
             return true;
         }
@@ -273,14 +274,14 @@ class GroupModel extends ModelDAO {
 
     addUser(user) {
         const index = this.obj.users.indexOf(user);
-        if (index === -1){
+        if (index === -1) {
             this.obj.users.push(user);
         }
     }
 
     removeUser(user) {
         const index = this.obj.users.indexOf(user);
-        if (index !== -1){
+        if (index !== -1) {
             this.obj.users.splice(index, 1);
             this.removeUser(user);
         }
@@ -296,15 +297,15 @@ class GroupModel extends ModelDAO {
 
         this._save(content);
     }
-    
-    create(user, id) {
+
+    create(user, uid) {
         // "groupname:x:gid:users"
-        const string = `${user}:x:${id}:`;
+        const string = `${user}:x:${uid}:`;
         return this.obj.fromString(string);
     }
 }
 
-class ShadowModel extends ModelDAO { 
+class ShadowModel extends ModelDAO {
     constructor() {
         super("./log/etc.shadow.log", new ShadowPojo());
     }
@@ -324,11 +325,11 @@ class PasswdModel extends ModelDAO {
         super("./log/etc.passwd.log", new PasswdPojo());
     }
 
-    create(user, id) {
-        // "username:x:id:gid:info:home:cmd"
+    create(user, uid, info) {
+        // "username:x:uid:gid:info:home:cmd"
         const defaultHome = `/home/${user}`;
         const defaultCmds = `/bin/bash`;
-        const string = `${user}:x:${id}:${id}::${defaultHome}:${defaultCmds}`;
+        const string = `${user}:x:${uid}:${uid}:${info}:${defaultHome}:${defaultCmds}`;
         return this.obj.fromString(string);
     }
 
@@ -345,12 +346,12 @@ class PasswdModel extends ModelDAO {
     valid() {
         const res = this.obj.validAttrs();
         const regexPaths = /^[^\/]|[\/]$/; // Deve começar com '/' e terminar sem '/'
-        if (!res.attrs.includes("id")) {
-            if (this.obj.id <= 1000 || this.obj.id >= 60000) {
+        if (!res.attrs.includes("uid")) {
+            if (this.obj.uid <= 1000 || this.obj.uid >= 60000) {
                 res.value = false;
-                res.attrs.push("id");
+                res.attrs.push("uid");
             }
-        } 
+        }
         if (!res.attrs.includes("gid")) {
             if (this.obj.gid <= 1000 || this.obj.gid >= 60000) {
                 res.value = false;
@@ -368,7 +369,7 @@ class PasswdModel extends ModelDAO {
                 const hasInvalidCmds = this.obj.cmds
                     .split(",")
                     .filter(cmd => regexPaths.test(cmd));
-                if(hasInvalidCmds.length !== 0) {
+                if (hasInvalidCmds.length !== 0) {
                     res.value = false;
                     res.attrs.push("cmds");
                 }
@@ -383,32 +384,32 @@ class PasswordService {
     constructor() {
         this.managerPasswd = new PasswdModel();
         this.managerShadow = new ShadowModel();
-        this.managerGroup  = new GroupModel();
+        this.managerGroup = new GroupModel();
 
-        var ids = this.managerPasswd.list()
-            .map(pass => pass.id)
-            .filter(id => id >= 1000 && id < 10000);
-        
-        this.userId = Math.max.apply(Math, [1000].concat(ids)) + 1;
-        
-        ids = this.managerGroup.list()
+        var uids = this.managerPasswd.list()
+            .map(pass => pass.uid)
+            .filter(uid => uid >= 1000 && uid < 10000);
+
+        this.userId = Math.max.apply(Math, [1000].concat(uids)) + 1;
+
+        uids = this.managerGroup.list()
             .map(group => group.gid)
-            .filter(id => id >= 1000 && id < 10000);
+            .filter(gid => gid >= 1000 && gid < 10000);
 
-        this.groupId = Math.max.apply(Math, [1000].concat(ids)) + 1;
+        this.groupId = Math.max.apply(Math, [1000].concat(uids)) + 1;
     }
 
-    addUser(user, password) {
+    addUser(user, password, info) {
         // Verificando se "user" ja existe como usuário ou grupo
         var userObj = this.managerPasswd.get(user);
         var shadowObj = this.managerShadow.get(user);
         var groupObj = this.managerGroup.get(user);
-        
+
         if (!userObj && !shadowObj && !groupObj) {
             try {
                 var res = true;
 
-                this.managerPasswd.create(user, this.userId);
+                this.managerPasswd.create(user, this.userId, info);
                 res = res && this.managerPasswd.add();
                 this.managerShadow.create(user, password);
                 res = res && this.managerShadow.add();
@@ -421,7 +422,7 @@ class PasswordService {
                 }
             } catch (e) {
                 console.log(e);
-            }               
+            }
             // Rollback
             this.managerPasswd.get(user);
             this.managerShadow.get(user);
@@ -479,7 +480,7 @@ class PasswordService {
             this.managerGroup.addUser(user);
             this.managerGroup.update();
             return true;
-        } 
+        }
         return false;
     }
 
@@ -489,7 +490,7 @@ class PasswordService {
             this.managerGroup.removeUser(user);
             this.managerGroup.update();
             return true;
-        } 
+        }
         return false;
     }
 
@@ -528,9 +529,9 @@ class PasswordService {
         return this.managerPasswd.get(user);
     }
     getGroup(group) {
-        return this.managerGroup.get(group); 
+        return this.managerGroup.get(group);
     }
-    
+
     getGroupsOfUser(user) {
         return this.managerGroup.filter(group => {
             return group.users.includes(user);

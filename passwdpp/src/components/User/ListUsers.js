@@ -1,29 +1,38 @@
 import React, { Component } from 'react'
-import { List, Responsive, SimpleList, Datagrid, TextField, EmailField, DateField } from 'react-admin'
+import { List,
+    Responsive,
+    SimpleList,
+    Datagrid,
+    TextField
+} from 'react-admin'
 
-const Title = ({ record }) => {
+const Title = () => {
     return <span>Usuários</span>;
 };
+
+const StatusField = ({ record = {}, source }) =>
+    <span >
+        {source === 'x' ? 'Ativo' : 'Bloqueado'}
+    </span>;
 
 export class ListUsers extends Component {
     render() {
         return (
-            <List title={<Title />} {...this.props}>
+            <List title={<Title />} pagination={false} {...this.props}>
                 <Responsive
                     small={
                         <SimpleList
-                            primaryText={record => `${record.id} - ${record.username}`}
-                            secondaryText={record => `${record.name}`}
-                            tertiaryText={record => `${record.lastModification}`}
+                            primaryText={record => `${record.name} - ${record.uid}`}
+                            secondaryText={record => `${record.x}`}
+                            tertiaryText={record => `${record.home}`}
                         />
                     }
                     medium={
                         <Datagrid rowClick="edit">
-                            <TextField label="ID" source="id" />
-                            <TextField label="Nome de usuário" source="username" />
-                            <TextField label="Nome" source="name" />
-                            <EmailField label="E-mail" source="email" />
-                            <DateField label="Modificado em" source="lastModification" />
+                            <TextField label="Usuário" source="name" />
+                            <TextField label="Info" source="info" />
+                            <TextField label="Home" source="home" />
+                            <StatusField label="Status" source="x" />
                         </Datagrid>
                     }
                 />
