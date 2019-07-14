@@ -3,10 +3,13 @@ import { AUTH_LOGIN, AUTH_LOGOUT, AUTH_ERROR, AUTH_CHECK } from 'react-admin';
 export function authProvider(type, params) {
     // called when the user attempts to log in
     if (type === AUTH_LOGIN) {
-        const { username } = params
-        localStorage.setItem('username', username)
-            // accept all username/password combinations
-        return Promise.resolve()
+        const { username, password } = params
+        if (username === 'admin' && password === '123mudar') {
+            localStorage.setItem('username', username)
+            return Promise.resolve()
+        } else {
+            return Promise.reject("Usuário ou senha incorretos")
+        }
     }
     // called when the user clicks on the logout button
     if (type === AUTH_LOGOUT) {
