@@ -1,6 +1,12 @@
+const b64_sha512crypt = require("sha512crypt-node");
 const crypto = require("crypto");
 const fs = require("fs");
 
+function generateHashPassword(password) {
+    const salt = `$6$${genRandomString(8)}`;
+    const code = b64_sha512crypt.sha512crypt(password, salt);
+    return "$" + code.split("$").slice(4).join("$");
+}
 
 function deleteFolderRecursive(path) {
     if (fs.existsSync(path)) {
@@ -107,5 +113,6 @@ module.exports = {
     checkForSequenceChars,
     checkForSequenceNumbers,
     validPassword,
-    sha512
+    sha512,
+    generateHashPassword
 };

@@ -10,9 +10,10 @@ import {
     GET_MANY,
     GET_MANY_REFERENCE,
 } from 'react-admin';
+import axios from 'axios'
 
-// const apiUrl = 'http://localhost:8080/'
-const apiUrl = 'http://jsonplaceholder.typicode.com'
+const apiUrl = 'http://localhost:8080'
+    // const apiUrl = 'http://jsonplaceholder.typicode.com'
 
 /**
  * Maps react-admin queries to API
@@ -22,116 +23,101 @@ const apiUrl = 'http://jsonplaceholder.typicode.com'
  * @param {Object} payload Request parameters. Depends on the request type
  * @returns {Promise} the Promise for a data response
  */
+
+function parseResponse(res, type) {
+    if (res.statusText !== "OK") {
+        console.log("REQUEST ERROR");
+    }
+
+    if (res.status === 400 || res.status === 404 || res.status === 500) {
+        console.log("ERROR");
+        console.log(res);
+    } else {
+
+        var data = res.data
+
+        switch (type) {
+            case GET_LIST:
+                return { data: data, total: data.length }
+            case CREATE:
+                return { data: { data, id: data.id } }
+            default:
+                return { data: data }
+        }
+    }
+}
+
 export function dataProvider(type, resource, params) {
     let url = ''
-    const options = {
-        headers: new Headers({
-            Accept: 'application/json',
-        }),
+    let myHeaders = new Headers()
+
+    myHeaders.append("Access-Control-Allow-Origin", "*")
+    myHeaders.append("Access-Control-Allow-Headers", "*")
+    myHeaders.append("Access-Control-Allow-Methods", "*")
+    myHeaders.append("Content-Type", "*")
+    myHeaders.append("Accept", "application/json")
+
+    var options = {
+        headers: myHeaders
     }
 
     var query = null
+    console.log('X X X X X X X X X X');
+    console.log(params);
+    console.log('X X X X X X X X X X');
+
+    // if (params.data) {
+    //     params.data.user_id = 'teste'
+    // }
+
     switch (type) {
         case GET_LIST:
-            {
-                const { page, perPage } = params.pagination
-                const { field, order } = params.sort
-                query = {
-                    sort: JSON.stringify([field, order]),
-                    range: JSON.stringify([
-                        (page - 1) * perPage,
-                        page * perPage - 1,
-                    ]),
-                    filter: JSON.stringify(params.filter),
-                };
-                url = `${apiUrl}/${resource}?${stringify(query)}`
-                // url = `${apiUrl}/${resource}`
-                break
-            }
+            url = `${apiUrl}/${resource}`
+            return axios.get(url, options).then(res => {
+                return parseResponse(res, type)
+            })
         case GET_ONE:
             url = `${apiUrl}/${resource}/${params.id}`
-            break
+            return axios.get(url, options).then(res => {
+                return parseResponse(res, type)
+            })
         case CREATE:
             url = `${apiUrl}/${resource}`
-            options.method = 'POST'
-            options.body = JSON.stringify(params.data)
-            break
+            return axios.post(url, params.data, options).then(res => {
+                return parseResponse(res, type)
+            })
         case UPDATE:
             url = `${apiUrl}/${resource}/${params.id}`
-            options.method = 'PUT'
-            options.body = JSON.stringify(params.data)
-            break
-        case UPDATE_MANY:
-            query = {
-                filter: JSON.stringify({ id: params.ids }),
-            };
-            url = `${apiUrl}/${resource}?${stringify(query)}`
-            options.method = 'PATCH'
-            options.body = JSON.stringify(params.data)
-            break
+            params.data.user_id_target = params.data.id
+            return axios.put(url, params.data, options).then(res => {
+                return parseResponse(res, type)
+            })
         case DELETE:
             url = `${apiUrl}/${resource}/${params.id}`
-            options.method = 'DELETE'
-            break
+            return axios.delete(url, options).then(res => {
+                return parseResponse(res, type)
+            })
         case DELETE_MANY:
             query = {
                 filter: JSON.stringify({ id: params.ids }),
             };
             url = `${apiUrl}/${resource}?${stringify(query)}`
-            options.method = 'DELETE'
-            break
-        case GET_MANY:
-            {
-                query = {
-                    filter: JSON.stringify({ id: params.ids }),
-                };
-                url = `${apiUrl}/${resource}?${stringify(query)}`
-                break
-            }
-        case GET_MANY_REFERENCE:
-            {
-                const { page, perPage } = params.pagination;
-                const { field, order } = params.sort;
-                query = {
-                    sort: JSON.stringify([field, order]),
-                    range: JSON.stringify([
-                        (page - 1) * perPage,
-                        page * perPage - 1,
-                    ]),
-                    filter: JSON.stringify({
-                        ...params.filter,
-                        [params.target]: params.id,
-                    }),
-                };
-                url = `${apiUrl}/${resource}?${stringify(query)}`
-                break;
-            }
+            return axios.delete(url, options).then(res => {
+                return parseResponse(res, type)
+            })
         default:
             throw new Error(`Unsupported Data Provider request type ${type}`)
     }
 
-    return fetch(url, options)
-        .then(res => res.json())
-        .then(json => {
-            console.log(json);
-            
-            switch (type) {
-                case GET_LIST:
-                    return { data: json, total: json.length }
-                // case GET_ONE:
-                //         return { data: json }
-                case CREATE:
-                    return { data: { ...params.data, id: json.id } }
-                // case UPDATE:
-                //     return { data: json }
-                // case DELETE:
-                //     return { data: json }
-                // case DELETE_MANY:
-                //     return { data: json }
-                default:
-                    return { data: json }
-            }
+    return axios({
+            method: options.method,
+            url: url,
+            data: options.body
+        })
+        .then(res => {
+
         })
 }
+
 
 export default dataProvider
