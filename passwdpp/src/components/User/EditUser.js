@@ -12,7 +12,7 @@ export class EditUser extends Component {
         return (
             <div>
                 <TextInput label="Nova Senha" source="password" type="password" style={{width: '100%'}}/>
-                <TextInput label="Confirmar a nova senha" source="confirm_password" type="password" />
+                <TextInput label="Confirmar a nova senha" source="confirm_password" type="password" style={{width: '100%'}}/>
             </div>
         );
     }

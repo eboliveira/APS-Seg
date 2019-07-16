@@ -2,6 +2,7 @@ import React, { Component } from 'react'
 import { Create, SimpleForm, NumberInput, TextInput, BooleanInput } from 'react-admin'
 
 export class CreateUser extends Component {
+
     render() {
         return (
             <Create {...this.props}>
@@ -16,6 +17,5 @@ export class CreateUser extends Component {
         )
     }
 }
-
 
 export default CreateUser
